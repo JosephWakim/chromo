@@ -301,4 +301,65 @@ def end_pivot_move(polymer, epigenmark, density, mcmove, field, window_size):
     assess_move_acceptance(polymer, ind0, indf+1, density, mcmove, r_poly_trial, t3_poly_trial, delta_index_xyz, delta_density, delta_energy)
 
     return
+
+
+def slide_move(polymer, epigenmark, density, num_epigenmark, i_poly, mcmove, field, window_size):
+    """
+    Randomly translate a segment of the polymer.
+
+    Parameters
+    ----------
+    polymer : Polymer
+        Object containing polymer properties
+    epigenmark : epigenmark object
+        Object contianing epigenetic mark properties
+    density : float
+        Mass density of the polymer
+    num_epigenmark : int
+        Number of epigenetic marks included in the simulation
+    i_poly : int
+        Index of individual polymer in polymer object
+    mcmove : mcmove object
+        Object describing characteristics of the MC move (e.g. amplitude)
+    field : Field
+        Object describing properties of the energy field
+    window_size : int
+        Maximum number of nucleosomes to translate in any one MC move
+    """
+
+    active_poly = polymer[i_poly]   # isolate affected by move
+    active_move = mcmove[2]         # isolate active move
+    
+    # Set move amolitude
+    translation_amp = active_move.amp_move * (np.random.rand())
+
+    # Partition translation move into x, y, z components
+    rand_z = np.random.rand()
+    translation_z = translation_amp * rand_z    
+    rand_angle = np.random.rand() * 2 * np.pi
+    translation_y = np.sqrt(1 - rand_z) * translation_amp * np.sin(rand_angle)
+    translation_z = np.sqrt(1 - rand_z) * translation_amp * np.cos(rand_angle)
+
+    # Sepect a segment of nucleosomes on which to apply the move
+    num_beads = active_poly.num_beads
+    ind0 = np.random.randint(num_beads)
+    select_window = np.amin(np.array([num_beads-ind0, ind0, window_size]))
+    indf = select_bead_from_point(select_window, num_beads, ind0)
+
+    translation_mat = np.identity(4)
+    translation_mat[0, 3] = translation_x
+    translation_mat[1, 3] = translation_y
+    translation_mat[2, 3] = translation_z
  
+    r_points = np.ones((4, indf-ind0+1)
+    r_points[0:3, :] = active_poly.r_poly[ind0:indf+1, :].T
+    t3_poly = active_poly.t3_poly[ind0:indf+1, :].T
+    
+    r_poly_trial = translation_mat @ r_points
+    
+    # assess move by Metropolis Criterion
+    delta_index_xyz, delta_density, delta_energy = assess_energy_change(polymer, epigenmark, density, num_epigenmark, i_poly, ind0, indf+1, field, r_poly_trial, t3_poly)
+    assess_move_acceptance(polymer, i_poly, ind0, indf+1, density, mcmove, r_poly_trial, t3_poly, delta_index_xyz, delta_density, delta_energy)
+
+   return
+
