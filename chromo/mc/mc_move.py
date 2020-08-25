@@ -363,3 +363,69 @@ def slide_move(polymer, epigenmark, density, num_epigenmark, i_poly, mcmove, fie
 
    return
 
+
+def tangent_rotation_move(polymer, epigenmark, density, num_epigenmark, i_poly, mcmove, 
+    field, window_size):
+    """
+    Randomly rotate the tangent vector of a bead in the chain.     
+
+    Parameters
+    ----------
+    polymer : Polymer
+        Object containing polymer properties
+    epigenmark : epigenmark object
+        Object contianing epigenetic mark properties
+    density : float
+        Mass density of the polymer
+    num_epigenmark : int
+        Number of epigenetic marks included in the simulation
+    i_poly : int
+        Index of individual polymer in polymer object
+    mcmove : mcmove object
+        Object describing characteristics of the MC move (e.g. amplitude)
+    field : Field
+        Object describing properties of the energy field
+    window_size : int
+        Number of beads surrounding rotate bead to account for during energy calculation
+    """
+
+    active_poly = polymer[i_poly]   # isolate affected by move
+    active_move = mcmove[3]         # isolate active move
+    
+    # generate random rotation angle
+    rot_angle = active_move.amp_move * (np.random.rand() - 0.5)
+    
+    # isolate a bead in the polymer
+    num_beads = active_poly.num_beads
+    ind_c = np.random.randint(num_beads)        # select a random, central (c) bead to rotate
+    r_ind_c = active_poly.r_poly[ind0, :]
+    t3_ind_c = active_poly.r_poly[ind0, :]
+
+    # Specify second point in random rotation axis
+    phi = np.random.rand() * 2 * np.pi
+    theta = np.random.rand() * np.pi
+    r = 1
+    del_x = r * np.sin(theta) * np.cos(phi)
+    del_y = r * np.sin(theta) * np.sin(phi)
+    del_z = r * np.cos(theta)
+    r_ind_base = r_ind_c + np.array([del_x, del_y, del_z])
+
+    # Generate rotation matrix and rotate bead at ind0
+    rot_matrix = arbitrary_axis_rotation(r_ind_c, r_ind_base, rot_angle)
+    t3_ind_c_trial = rot_matrix @ t3_ind_c.T
+    t3_ind_c_trail = t3_ind_c_trial.T
+
+    # Isolate trial positions and orientations
+    ind0 = np.max(0, ind_c - round(window_size/2))
+    indf = np.min(num_beads, ind_c + round(window_size/2) + 1)
+    
+    r_poly_trial = active_poly.r_poly[ind0:indf, :]
+    t3_poly_trial = active_poly.t3_poly[ind0:indf, :]
+    t3_poly_trial[ind_c - ind0] = t3_ind_c_trial
+
+    # assess move by Metropolis Criterion
+    delta_index_xyz, delta_density, delta_energy = assess_energy_change(polymer, epigenmark, density, num_epigenmark, i_poly, ind0, indf, field, r_poly_trial, t3_poly_trial)
+    assess_move_acceptance(polymer, i_poly, ind0, indf, density, mcmove, r_poly_trial, t3_poly_trial, delta_index_xyz, delta_density, delta_energy)
+
+    return
+
