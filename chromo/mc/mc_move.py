@@ -353,9 +353,9 @@ def slide_move(polymer, epigenmark, density, num_epigenmark, i_poly, mcmove, fie
  
     r_points = np.ones((4, indf-ind0+1)
     r_points[0:3, :] = active_poly.r_poly[ind0:indf+1, :].T
-    t3_poly = active_poly.t3_poly[ind0:indf+1, :]
-    
+    t3_poly = active_poly.t3_poly[ind0:indf+1, :]  
     r_poly_trial = translation_mat @ r_points
+    r_poly_trial = r_poly_trial.T
     
     # assess move by Metropolis Criterion
     delta_index_xyz, delta_density, delta_energy = assess_energy_change(polymer, epigenmark, density, num_epigenmark, i_poly, ind0, indf+1, field, r_poly_trial, t3_poly)
