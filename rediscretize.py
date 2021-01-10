@@ -12,6 +12,8 @@ Date:   January 7, 2020
 
 """
 
+import sys
+
 import pandas as pd
 import numpy as np
 
@@ -26,10 +28,16 @@ def check_single_chrom(df):
         Pandas dataframe characterizing chromosomal intervals. Must contain
         columns ['chrom', 'start_ind', 'end_ind', 'signal']. Rows must be
         sorted in order of increasing genomic position.
+
+    Returns
+    -------
+    chrom : str
+        Chromosome identifier
     """
     chrom = np.unique(df['chrom'].to_list())
     if len(chrom) != 1:
         raise ValueError("Rediscretize only one chromosome at a time.")
+    return chrom[0]
 
 
 def rebuild_df(headers, chrom, start, end, signal):
@@ -60,13 +68,13 @@ def rebuild_df(headers, chrom, start, end, signal):
         headers[2] : end,
         headers[3] : signal
     }
-    return pd.dataframe(data=data)
+    return pd.DataFrame(data=data)
 
 
 class Bin:
     """Class representation of rediscretized bin holding signal values."""
 
-    def __init__(self, values, fractions, width):
+    def __init__(self, values, fractions, width, repeat=False):
         """
         Initialize `Bin` object.
 
@@ -78,11 +86,16 @@ class Bin:
             Fraction of the bin associated with each value, len = len(values)
         width : int
             Number of base pairs represented by the bin
+        repeat : bool, default False
+            If true, values in genomic interval will be repeated into
+            each rediscretized bin; else, values in each genomic interval will
+            be evenly distributed within the  interval before rediscretization
         """
         self.check_attribute_compatability(values, fractions)
         self.values = values
         self.fractions = fractions
         self.width = width
+        self.repeat = repeat
 
     def check_attribute_compatability(self, values, fractions):
         """
@@ -104,6 +117,34 @@ class Bin:
             if isinstance(fractions, (list, tuple, np.ndarray)):
                 raise ValueError(
                     "Bin values and fractions must be equal lengths.")
+    
+    def get_value(self):
+        """
+        Get the value of the bin.
+        
+        If `self.repeat` == False, return a weighted sum of values in 
+        `self.values`. Otherwise, convert fractions into proportional whole
+        numbers and duplicate each value in `self.values` by the respective
+        whole number; return the most common value, randomly breaking ties.
+
+        Returns
+        -------
+        numeric or str
+            Overall value representative of the bin
+        """
+        if not self.repeat:
+            return np.sum(np.multiply(self.values, self.fractions))
+        else:
+            fractions = np.atleast_1d(np.array(self.fractions).astype(float))
+            frac_str = fractions.astype(str)
+            max_decimals = np.max([len(x.split('.')[-1]) for x in frac_str])
+            fractions *= 10 ** max_decimals
+            fractions = fractions.astype(int)
+            expanded = [[self.values[i]] * j for i, j in enumerate(fractions)]
+            expanded = np.array(expanded).flatten()
+            unique, count = np.unique(expanded, return_counts=True)
+            return unique[
+                np.random.choice(np.argwhere(count==np.amax(count)).flatten())]
 
 
 class Rediscretize:
@@ -157,14 +198,15 @@ class Rediscretize:
         dataframe
             Rediscretized dataframe containing redistributed signals
         """
-        # Calculate rediscretized genomic interval bounds for single chromosome
         headers = list(df.columns)
-        check_single_chrom(df)
+        chrom = check_single_chrom(df)
         bin_edges = self.get_rediscretized_bin_edges(df)
         start, end = self.get_rediscretized_intervals(bin_edges)
         interval_edges = self.get_genomic_interval_edges(df)
         bins_per_interval = np.divide(np.ediff1d(interval_edges), self.step)
         bins = self.categorize_bins(df, bins_per_interval)
+        signal = [b.get_value() for b in bins]
+        return rebuild_df(headers, chrom, start, end, signal)
 
     def categorize_bins(self, df, bins_per_interval):
         """
@@ -188,30 +230,58 @@ class Rediscretize:
         bins = []
         i = 0
         while i <= len(bins_per_interval)-1:
+            current_val = self.get_val_at_index(df, bins_per_interval, i)
             interval = bins_per_interval[i] - remainder
-            values = []
-            fractions = []
+            values, fractions = [], []
             remainder = 0
             previous_interval = 0
-            j = 0
-            while interval > 1:
-                bins.append(Bin(df.iloc[i,3], 1, self.step))
+            j = 0   
+            while interval >= 1:
+                bins.append(Bin(current_val, 1, self.step, self.repeat))
                 interval -= 1
             while interval < 1 and interval != 0:
+                if i == len(bins_per_interval)-1:
+                    bins.append(Bin(current_val, 1, self.step, self.repeat))
+                    return bins
                 fractions.append(interval)
-                values.append(df.iloc[i+j,3])
+                values.append(self.get_val_at_index(df,bins_per_interval,i+j))
                 j += 1
                 previous_interval = interval
-                interval += bins_per_interval[i+j]
+                interval += bins_per_interval[i+j]        
             if interval != 0:
                 remainder = 1 - previous_interval
                 fractions.append(1-np.sum(fractions))
-                values.append(df.iloc[i+j,3])
-                bins.append(Bin(values, fractions, self.step))
+                values.append(self.get_val_at_index(df,bins_per_interval,i+j))
+                bins.append(Bin(values, fractions, self.step, self.repeat))
                 i += j
             else:
-                i += j+1
+                i += j + 1
         return bins
+
+    def get_val_at_index(self, df, bins_per_interval, ind):
+        """
+        Get the value of a signal distributed into a rediscretized bin.
+
+        Parameters
+        ----------
+        df : dataframe
+            Pandas dataframe characterizing chromosomal intervals. Must contain
+            columns ['chrom', 'start_ind', 'end_ind', 'signal']. Rows must be
+            sorted in order of increasing genomic position.
+        bins_per_interval : List[float]
+            Number of bins in each genomic interval
+        ind : int
+            Row in the data frame containing original value
+        
+        Returns
+        -------
+        value : numeric or str
+            Value to be distributed into rediscretized bins
+        """
+        value = df.iloc[ind,3]
+        if not self.repeat:
+            value /= bins_per_interval[ind]
+        return value
         
     def get_rediscretized_bin_edges(self, df):
         """
@@ -231,13 +301,14 @@ class Rediscretize:
         """
         ind0 = df['start_ind'].iloc[0]
         indf = df['end_ind'].iloc[-1]
-        bin_edges = np.arange(ind0, floor((indf-ind0)/self.step))
+        bin_edges = np.arange(ind0, np.floor((indf-ind0)/self.step)+1)
+        bin_edges *= self.step
         if (indf - ind0) % self.step == 0:
             return bin_edges
         else:
             return np.append(bin_edges, indf)
 
-    def get_rediscretized_intervals(bin_edges):
+    def get_rediscretized_intervals(self, bin_edges):
         """
         Get genomic intervals following rediscretization.
 

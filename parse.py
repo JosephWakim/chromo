@@ -21,7 +21,8 @@ import numpy as np
 from rediscretize import *
 from file_util import *
 
-autosomes = ['chr'+str(i) for i in range(23)]
+autosomes = ['chr'+str(i) for i in range(1, 23)]
+autosomes = autosomes[0:2]  # For debugging.
 nuc_scale = 200
 WIG_headers = ['chrom', 'start_ind', 'end_ind', 'signal']
 annotation_headers = ['chrom', 'start_ind', 'end_ind', 'annotation']
@@ -301,13 +302,13 @@ class BEDParser:
         step : int
             Unit size following rediscretization
         repeat : bool, default False
-            If true, values repeated during expansion; else vals evenly distributed
+            If true, vals repeated in expansion; else vals evenly distributed
         """
+        redisc = Rediscretize(step, categorical=repeat, repeat=repeat)
         for chrom in self.chromosomes:
             print("Rediscretizing Chromosome: " + chrom)
-            self.chromosomes[chrom].data = rediscretize_chromosome(
-                self.chromosomes[chrom].data, step, repeat
-            )
+            self.chromosomes[chrom].data = \
+                redisc.rediscretize_chromosome(self.chromosomes[chrom].data)
 
     def save_data(self, dir_path):
         """
@@ -325,6 +326,3 @@ class BEDParser:
         """Replace all missing annotations in the `BEDParser` object."""
         for chrom in self.chromosomes:
             self.chromosomes[chrom].replace_missing_annotations()
-    
-
-
