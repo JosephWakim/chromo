@@ -1,12 +1,12 @@
 """
 Parse BED and WIG files to construct CSV files with rediscretized signals.
 
-The `BEDParser` is used to read BED files containing ChIP-seq peak and
-epigenetic subccompartment annotatations. The subcompartment annotations are
-then rediscretized to approximate nucleosome scale resolution. `WIGParser` is
-used to read aligned ChIP-seq signals and rediscretize those signals to
-approximate nucleosome resolution. CSV files are created and outputted to the
-appropriate directory to free up RAM.
+The `Parser` is used to read BED files containing ChIP-seq peak and epigenetic
+subccompartment annotatations. The subcompartment annotations are then
+rediscretized to approximate nucleosome scale resolution. `WIGParser` is used
+to read aligned ChIP-seq signals and rediscretize those signals to approximate
+nucleosome resolution. CSV files are created and outputted to the appropriate
+directory to free up RAM.
 
 By:     Joseph Wakim
 Date:   January 7, 2020
@@ -84,6 +84,8 @@ class Genome:
         
         self.initialize_directories(output)
         self.parse_annotations(annotation)
+        self.parse_peaks(peaks)
+        self.parse_signals(signals)
 
     def initialize_directories(self, parent_dir):
         """
@@ -136,14 +138,14 @@ class Genome:
         
         output_paths['peaks'] = output_paths['genome'] + '/peaks'
         for peak in self.input_paths['peaks']:
-            peak = peak.split('/')[-1].split('.')[0]
+            peak = self.get_name(peak)
             output_paths["peaks_"+peak] = output_paths['peaks'] + '/' + peak
             output_paths['peaks_'+peak+'_chr']=output_paths["peaks_"+peak]+\
                 '/chromosomes'
         
         output_paths['signals'] = output_paths['genome'] + '/signals'
         for sig in self.input_paths['signals']:
-            sig = sig.split('/')[-1].split('.')[0]
+            sig = self.get_name(sig)
             output_paths["signals_"+sig] = output_paths['signals'] + '/' + sig
             output_paths['signals_'+sig+'_chr']=output_paths["signals_"+sig]+\
                 '/chromosomes'
@@ -156,30 +158,62 @@ class Genome:
 
         Parameters
         ----------
-        patth : str
+        path : str
             Path to the BED file containing subcompartment annotations.
         """
-        annotations = BEDParser(
+        annotations = Parser(
             'annotation', path, [i for i in range(4)], annotation_headers
         )
         annotations.fill_all_missing_annotations()
         annotations.rediscretize_all_chromosomes(nuc_scale, repeat=True)
         annotations.save_data(self.output_paths['annotations_chr'])
 
-    def read_peaks(self, paths):
+    def parse_peaks(self, paths):
         """
         Read ChIP-seq peak annotations from a BED file.
 
         Parameters
         ----------
-        peak_paths : List[str]
+        paths : List[str]
             List of paths to the BED files containing ChIP-seq peak annotations
         """
         cols = [i for i in range(3)]
-        self.peaks = {}
         for path in paths:
-            name = path.split('.')[0]
-            self.peaks[name] = BEDParser(name, path, cols, peak_headers)
+            name = self.get_name(path)
+            peak = Parser(name, path, cols, peak_headers)
+            peak.save_data(self.output_paths['peaks_'+name+'_chr'])
+
+    def parse_signals(self, paths):
+        """
+        Read ChIP-seq signals from a WIG file.
+
+        Parameters
+        ----------
+        paths : List[str]
+            List of paths to the WIG files containing ChIP-seq signals
+        """
+        cols = None
+        for path in paths:
+            name = self.get_name(path)
+            signal = Parser(name, path, cols, WIG_headers, format='WIG')
+            signal.rediscretize_all_chromosomes(nuc_scale, repeat=False)
+            signal.save_data(self.output_paths['signals_'+name+'_chr'])
+
+    def get_name(self, path):
+        """
+        Get the name of a data file from its file path.
+
+        Parameters
+        ----------
+        path : str
+            Path to the data file
+        
+        Returns
+        -------
+        name : str
+            Name of the data file
+        """
+        return path.split('/')[-1].split('.')[0]
 
 
 class Chromosome:
@@ -247,10 +281,10 @@ class Chromosome:
                 self.data.iloc[i,3] = "NA"
 
 
-class BEDParser:
+class Parser:
     """Class representation of a BED file parser."""
 
-    def __init__(self, name, path, cols, headers):
+    def __init__(self, name, path, cols, headers, format='BED'):
         """
         Initialize Parser object.
 
@@ -267,10 +301,20 @@ class BEDParser:
             List of column indices to read from the BED file
         headers : List[str]
             List of headers for dataframe
+        format : str, default = 'BED'
+            Format of the data file, either 'BED' or 'WIG'
         """
         self.name = name
-        all_data = self.open_BED(path, cols, headers)
-        self.chromosomes = separate_chromosomes(all_data)
+        
+        if format == 'BED':
+            all_data = self.open_BED(path, cols, headers)
+            self.chromosomes = separate_chromosomes(all_data)
+        
+        elif format == 'WIG':
+            self.chromosomes = self.open_WIG(path, headers)
+        
+        else:
+            raise ValueError("Specified file format not found.")
 
     def open_BED(self, path, cols, headers):
         """
@@ -292,6 +336,69 @@ class BEDParser:
         """
         df = pd.read_csv(path,header=None,sep='\t',usecols=cols,names=headers)
         return df
+
+    def open_WIG(self, path, headers):
+        """
+        Open tab-delimited WIG file.
+
+        Parameters
+        ----------
+        path : str
+            Path to the WIG file
+        headers : List[str]
+            List of headers for dataframe
+
+        Returns
+        -------
+        chromosomes : Dict[Chromosome objects]
+            Data from WIG file separated into a dictionary by chromosome
+        """
+        chromosomes = {}
+        for chrom in autosomes:
+            chromosomes[chrom] = self.open_chromosome_WIG(path, chrom, headers)
+        return chromosomes
+        
+    def open_chromosome(self, path, chrom, headers):
+        """
+        Open ChIP-seq signal data from specified chromosome.
+
+        Parameters
+        ----------
+        path : str
+            Path to the WIG file
+        chrom : str
+            Chromosome identifier
+        headers : List[str]
+            List of headers for dataframe
+
+        Returns
+        -------
+        chrom_obj : Chromosome object
+            Data for chromosome in WIG file specified by chrom
+        """
+        start_inds, end_inds, signals = [], [], []
+        found_chrom = False
+        
+        with open(path, mode='r') as f:
+            csv_reader = csv.reader(f, delimiter='\t')
+            for row in csv_reader:
+                
+                if row[0].startswith('#'):
+                    continue
+                
+                elif row[0] == chrom:
+                    start_inds.append(row[1])
+                    end_inds.append(row[2])
+                    signals.append(row[3])
+                    if not found_chrom:
+                        found_chrom = True
+                
+                else:
+                    if found_chrom:
+                        df = rebuild_df(headers, chrom, start, end, signal)
+                        chrom_obj = Chromosome(chrom, df)
+                        chrom_obj.rediscretize(nuc_scale)
+                        return chrom_obj
 
     def rediscretize_all_chromosomes(self, step, repeat=False):
         """
@@ -323,6 +430,6 @@ class BEDParser:
             self.chromosomes[chrom].save_data(dir_path+'/'+chrom)
 
     def fill_all_missing_annotations(self):
-        """Replace all missing annotations in the `BEDParser` object."""
+        """Replace all missing annotations in the `Parser` object."""
         for chrom in self.chromosomes:
             self.chromosomes[chrom].replace_missing_annotations()

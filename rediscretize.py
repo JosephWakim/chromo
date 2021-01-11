@@ -92,8 +92,8 @@ class Bin:
             be evenly distributed within the  interval before rediscretization
         """
         self.check_attribute_compatability(values, fractions)
-        self.values = values
-        self.fractions = fractions
+        self.values = np.atleast_1d(np.array(values))
+        self.fractions = np.atleast_1d(np.array(fractions))
         self.width = width
         self.repeat = repeat
 
@@ -135,14 +135,19 @@ class Bin:
         if not self.repeat:
             return np.sum(np.multiply(self.values, self.fractions))
         else:
-            fractions = np.atleast_1d(np.array(self.fractions).astype(float))
+            fractions = self.fractions.astype(float)
             frac_str = fractions.astype(str)
             max_decimals = np.max([len(x.split('.')[-1]) for x in frac_str])
+            
+            if frac_str[0][-1] == '0':
+                max_decimals -= 1
+            
             fractions *= 10 ** max_decimals
             fractions = fractions.astype(int)
             expanded = [[self.values[i]] * j for i, j in enumerate(fractions)]
             expanded = np.array(expanded).flatten()
             unique, count = np.unique(expanded, return_counts=True)
+            
             return unique[
                 np.random.choice(np.argwhere(count==np.amax(count)).flatten())]
 
