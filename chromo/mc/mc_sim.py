@@ -1,9 +1,46 @@
-"""Routines for performing Monte Carlo simulations."""
+"""Routines for performing Monte Carlo simulations.
+"""
+
+# Built-in Modules
+from typing import List
+import warnings
+
+# External Modules
 import numpy as np
 
+# Custom Modules
+from chromo.components import Polymer
+from chromo.marks import Epigenmark
+from chromo.fields import FieldBase
+from chromo.mc.moves import MCAdapter
 
-def mc_sim(polymers, epigenmarks, num_mc_steps, mc_moves, field):
-    """Perform Monte Carlo simulation."""
+
+def mc_sim(
+    polymers: List[Polymer],
+    epigenmarks: List[Epigenmark],
+    num_mc_steps: int,
+    mc_moves: List[MCAdapter],
+    field: FieldBase
+):
+    """Perform Monte Carlo simulation.
+
+    Repeat for each Monte Carlo step:
+        Repeat for each adaptable move:
+            If active, apply move to each polymer
+
+    Parameters
+    ----------
+    polymers: List[Polymer]
+        Polymers affected by Monte Carlo simulation
+    epigenmarks: List[Epigenmark]
+        Specification of epigenetic marks on polymer
+    num_mc_steps: int
+        Number of Monte Carlo steps to take between save points
+    mc_moves: List[MCAdapter]
+        List of Monte Carlo moves to perform during simulation
+    field: FieldBase
+        Field affecting polymer in Monte Carlo simulation
+    """
     for i in range(num_mc_steps):
 
         if (i+1) % 500 == 0:
@@ -16,17 +53,44 @@ def mc_sim(polymers, epigenmarks, num_mc_steps, mc_moves, field):
                         mc_step(adaptible_move, poly, epigenmarks, field)
 
 
-def mc_step(adaptible_move, poly, epigenmarks, field):
-    """Compute energy change and determine move acceptance."""
-    # get proposed state
+def mc_step(
+    adaptible_move: MCAdapter,
+    poly: Polymer,
+    epigenmarks: List[Epigenmark],
+    field: FieldBase
+):
+    """Compute energy change and determine move acceptance.
+
+    Get the proposed state of the polymer. Calculate the total (polymer + 
+    field) energy change associated with the move. Accept or reject the move
+    based on the Metropolis Criterion.
+
+    Parameters
+    ----------
+    adaptible_move: MCAdapter
+        Move applied at particular Monte Carlo step
+    poly: Polymer
+        Polymer affected by move at particular Monte Carlo step
+    epigenmarks: List[Epigenmark]
+        Epigenetic marks affecting polymer configuration
+    field: FieldBase
+        Field affecting polymer in Monte Carlo step
+    """
     proposal = adaptible_move.propose(poly)
 
-    # compute change in energy
     dE = 0
     dE += poly.compute_dE(*proposal)
     if poly in field:
         dE += field.compute_dE(poly, *proposal)
 
-    # accept move
-    if np.random.rand() < np.exp(-dE):
+    # Catch RuntimeWarning if the change in energy gets too large
+    warnings.filterwarnings("error")
+    try:
+        exp_dE = np.exp(-dE)
+    except RuntimeWarning:
+        exp_dE = 0
+
+    if np.random.rand() < exp_dE:       # accept
         adaptible_move.accept(poly, *proposal)
+    else:                               # reject
+        adaptible_move.reject()

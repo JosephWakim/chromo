@@ -1,21 +1,81 @@
-"""Monte Carlo simulations of a discrete wormlike chain."""
-from pathlib import Path
-import warnings
+"""Monte Carlo simulations of a discrete wormlike chain.
 
+This module runs Monte Carlo simulations for the reconfiguration of multiple
+discrete wormlike chains when placed in a user-specified field and labeled by
+multiple epigenetic marks.
+"""
+
+# Built-in Modules
+from pathlib import Path
+# import warnings
+from typing import List, Optional, Callable
+
+# External Modules
 import numpy as np
 
+# Custom Modules
 from .mc_sim import mc_sim
-from .moves import all_moves
+from .moves import all_moves, MCAdapter
 from ..util.reproducibility import make_reproducible
 from ..components import Polymer
+from ..marks import Epigenmark
+from ..fields import FieldBase
 from ..marks import get_by_name, make_mark_collection
 from ..fields import UniformDensityField
 
 
+# Custom Data Types
+STEPS = int      # Number of steps per MC save point
+SAVES = int      # Number of save points
+SEED = int       # Random seed
+DIR = str        # Directory in which to save outputs
+
+
 @make_reproducible
-def simple_mc(num_polymers, num_beads, bead_length, num_marks, num_save_mc,
-              num_saves, x_width, nx, y_width, ny, z_width, nz, random_seed=0,
-              output_dir='.'):
+def simple_mc(
+    num_polymers: int, num_beads: int, bead_length: float,
+    num_marks: int, num_save_mc: int, num_saves: int,
+    x_width: float, nx: int, y_width: float, ny: int,
+    z_width: float, nz: int, random_seed: Optional[SEED] = 0,
+    output_dir: Optional[DIR] = '.'
+) -> Callable[
+    [List[Polymer], List[Epigenmark], FieldBase, STEPS, SAVES, SEED, DIR], None
+]:
+    """Single line implementation of basic Monte Carlo simulation.
+
+    Initialize straight-line polymers with HP1 marks, and simulate in a uniform
+    density field.
+
+    Parameters
+    ----------
+    num_polymers : int
+        Number of polymers in the Monte Carlo simulation
+    num_beads : int
+        Number of beads in each polymer of the Monte Carlo simulation
+    bead_length : float
+        Length associated with a single bead in the polymer (bead + linker)
+    num_marks : int
+        Number of epigenetic marks in the simulation
+    num_save_mc : int
+        Number of Monte Carlo steps to take between configuration save points
+    num_saves : int
+        Number of save points to make in Monte Carlo simulation
+    x_width, y_width, z_width : float
+        x,y,z-direction bin widths when discretizing space
+    nx, ny, nz : int
+        Number of bins in the x,y,z-direction when discretizing space
+    random_seed : Optional[int]
+        Random seed to apply in simulation for reproducibility (default = 0)
+    output_dir : Optional[str]
+        Path to output directory in which polymer configurations will be saved
+        (default = '.')
+
+    Returns
+    -------
+    Callable[[List[Polymer], List[Epigenmark], FieldBase, STEPS, SAVES, SEED,
+    DIR], None]
+        Monte Carlo simulation of a tssWLC in a field
+    """
     polymers = [
         Polymer.straight_line_in_x(
             f'Polymer-{i}', num_beads, bead_length,
@@ -31,38 +91,61 @@ def simple_mc(num_polymers, num_beads, bead_length, num_marks, num_save_mc,
                              random_seed=random_seed, output_dir=output_dir)
 
 
-def _polymer_in_field(polymers, marks, field, num_save_mc, num_saves,
-                      mc_moves=None, random_seed=0, output_dir='.'):
+def _polymer_in_field(
+    polymers: List[Polymer], marks: List[Epigenmark],
+    field: FieldBase, num_save_mc: STEPS, num_saves: SAVES,
+    mc_moves: Optional[List[MCAdapter]] = None,
+    random_seed: SEED = 0, output_dir: DIR = '.'
+):
     """
     Monte Carlo simulation of a tssWLC in a field.
 
-    This example code can be used to understand how to call the codebase, or
-    run directly for simple simulations.
+    Identify the active Monte Carlo moves, and for each save point, perform a
+    Monte Carlo simulation and log coordinates and move/bead amplitudes.
 
     Parameters
     ----------
-    polymers : Sequence[Polymer]
-        The polymers to be simulated.
-    epigenmarks : `pd.DataFrame`
+    polymers : List[Polymer]
+        The polymers to be simulated
+    epigenmarks : List[Epigenmark]
         Output of `chromo.marks.make_mark_collection`. Summarizes the energetic
-        properties of each chemical modification.
-    field : Field
-        The discretization of space in which to simulate the polymers.
+        properties of each chemical modification
+    field : FieldBase
+        The discretization of space in which to simulate the polymers
     num_save_mc : int
-        How many Monte Carlo steps to take between saving the simulation state.
-    mc_moves : Optional[Sequence[int]]
-        ID of each monte carlo move desired. Default of None uses all moves.
-    output_dir : Optional[Path], default: '.'
-        Directory in which to save the simulation output.
+        Number of Monte Carlo steps to take between configuration save points
+    num_saves : int
+        Number of save points to make in Monte Carlo simulation
+    mc_moves : Optional[List[MCAdapter]]
+        Monte carlo move desired. Default of None uses all moves.
+    output_dir : Optional[Path]
+        Path to output directory in which polymer configurations will be saved
+        (default = '.')
     """
-    warnings.warn("The random seed is currently ignored.", UserWarning)
+    # Uncomment to remind the user to add a random seed
+    # warnings.warn("The random seed is currently ignored.", UserWarning)
     if mc_moves is None:
         mc_moves = all_moves
-    # Perform Monte Carlo simulation for each save file
+
     for mc_count in range(num_saves):
         mc_sim(polymers, marks, num_save_mc, mc_moves, field)
+
         for poly in polymers:
             poly.to_csv(output_dir / Path(f"{poly.name}-{mc_count}.csv"))
+
+        for move in mc_moves:
+            move.performance_tracker.save_move_log(
+                output_dir / Path(
+                    f"{poly.name}-{mc_count}_{move.name}_move_amps.csv"
+                ),
+                output_dir / Path(
+                    f"{poly.name}-{mc_count}_{move.name}_bead_amps.csv"
+                ),
+                output_dir / Path(
+                    f"{poly.name}-{mc_count}_{move.name}_acceptance_rates.csv"
+                )
+            )
+
         print("Save point " + str(mc_count) + " completed")
 
 

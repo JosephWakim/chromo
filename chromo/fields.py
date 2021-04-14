@@ -176,7 +176,7 @@ class UniformDensityField(FieldBase):
             # careful! mark.name is the Series.name attribute
             rows[mark['name']] = 'mark'
         # prints just key,value for each key in rows
-        return pd.Series(rows).to_csv(path, header=None)
+        return pd.Series(rows).to_csv(path, header=False)
 
     @classmethod
     def from_file(cls, path, polymers, marks):
@@ -342,15 +342,29 @@ class UniformDensityField(FieldBase):
 
     def _generate_index_vector(self, index_x0y0z0):
 
-        #TODO this can be done in one line
+        # TODO: this can be done in one line
         index_xyz_total = index_x0y0z0
-        index_xyz_total = np.concatenate((index_xyz_total, self.bin_index[index_x0y0z0, 1])).astype(int)
-        index_xyz_total = np.concatenate((index_xyz_total, self.bin_index[index_x0y0z0, 2])).astype(int)
-        index_xyz_total = np.concatenate((index_xyz_total, self.bin_index[index_x0y0z0, 3])).astype(int)
-        index_xyz_total = np.concatenate((index_xyz_total, self.bin_index[index_x0y0z0, 4])).astype(int)
-        index_xyz_total = np.concatenate((index_xyz_total, self.bin_index[index_x0y0z0, 5])).astype(int)
-        index_xyz_total = np.concatenate((index_xyz_total, self.bin_index[index_x0y0z0, 6])).astype(int)
-        index_xyz_total = np.concatenate((index_xyz_total, self.bin_index[index_x0y0z0, 7])).astype(int)
+        index_xyz_total = np.concatenate(
+            (index_xyz_total, self.bin_index[index_x0y0z0, 1])
+        ).astype(int)
+        index_xyz_total = np.concatenate(
+            (index_xyz_total, self.bin_index[index_x0y0z0, 2])
+        ).astype(int)
+        index_xyz_total = np.concatenate(
+            (index_xyz_total, self.bin_index[index_x0y0z0, 3])
+        ).astype(int)
+        index_xyz_total = np.concatenate(
+            (index_xyz_total, self.bin_index[index_x0y0z0, 4])
+        ).astype(int)
+        index_xyz_total = np.concatenate(
+            (index_xyz_total, self.bin_index[index_x0y0z0, 5])
+        ).astype(int)
+        index_xyz_total = np.concatenate(
+            (index_xyz_total, self.bin_index[index_x0y0z0, 6])
+        ).astype(int)
+        index_xyz_total = np.concatenate(
+            (index_xyz_total, self.bin_index[index_x0y0z0, 7])
+        ).astype(int)
         return index_xyz_total
 
     def _generate_weights_and_indices(self, r_poly):
