@@ -136,13 +136,13 @@ def _polymer_in_field(
         for move in mc_moves:
             move.performance_tracker.save_move_log(
                 output_dir / Path(
-                    f"{poly.name}-{mc_count}_{move.name}_move_amps.csv"
+                    f"move_amplitude/{poly.name}-{mc_count}_{move.name}_move_amps.csv"
                 ),
                 output_dir / Path(
-                    f"{poly.name}-{mc_count}_{move.name}_bead_amps.csv"
+                    f"bead_amplitude/{poly.name}-{mc_count}_{move.name}_bead_amps.csv"
                 ),
                 output_dir / Path(
-                    f"{poly.name}-{mc_count}_{move.name}_acceptance_rates.csv"
+                    f"acceptance_rate/{poly.name}-{mc_count}_{move.name}_acceptance_rates.csv"
                 )
             )
 

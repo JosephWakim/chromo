@@ -61,7 +61,7 @@ def mc_step(
 ):
     """Compute energy change and determine move acceptance.
 
-    Get the proposed state of the polymer. Calculate the total (polymer + 
+    Get the proposed state of the polymer. Calculate the total (polymer +
     field) energy change associated with the move. Accept or reject the move
     based on the Metropolis Criterion.
 
@@ -77,11 +77,13 @@ def mc_step(
         Field affecting polymer in Monte Carlo step
     """
     proposal = adaptible_move.propose(poly)
+    adaptible_move.last_amp_bead = proposal[-2]
+    adaptible_move.last_amp_move = proposal[-1]
 
     dE = 0
-    dE += poly.compute_dE(*proposal)
+    dE += poly.compute_dE(*proposal[:-2])
     if poly in field:
-        dE += field.compute_dE(poly, *proposal)
+        dE += field.compute_dE(poly, *proposal[:-2])
 
     # Catch RuntimeWarning if the change in energy gets too large
     warnings.filterwarnings("error")

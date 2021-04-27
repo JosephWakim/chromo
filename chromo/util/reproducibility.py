@@ -174,6 +174,16 @@ def get_unique_subfolder(root):
         folder_name = Path(str(root) + str(i))
         try:
             folder_name.mkdir(parents=True)
+
+            acceptance_rate_folder_name = Path(folder_name / 'acceptance_rate')
+            acceptance_rate_folder_name.mkdir(parents=True)
+
+            move_amplitude_folder_name = Path(folder_name / 'move_amplitude')
+            move_amplitude_folder_name.mkdir(parents=True)
+
+            bead_amplitude_folder_name = Path(folder_name / 'bead_amplitude')
+            bead_amplitude_folder_name.mkdir(parents=True)
+
             break
         except:
             i += 1

@@ -269,17 +269,45 @@ class UniformDensityField(FieldBase):
                                    " produced inconsistent results. There is a"
                                    " bug in the code.")
 
-    def compute_dE(self, poly, *proposal):
+    def compute_dE(self, poly, inds, r_trial, t3_trial, t2_trial, states_trial, 
+        continuous_inds):
         """
         Compute change in energy based on proposed new polymer location.
 
         Requires the polymer to be moved in order to compare to old state.
+
+        Parameters
+        ----------
+        inds : array_like (N, 3)
+            Ordered indices of N beads involved in the move
+        r_trial : array_like (N, 3)
+            Array of position vectors for N beads involved in the move
+        t3_trial : array_like (N, 3)
+            Array of t3 tangent vectors for N beads involved in the move
+        t2_trial : array_like (N, 3)
+            Array of t2 tangent vectors for N beads involved in the move
+        states_trial : array_like (N, M)
+            Array of M bead states for N beads involved in the move
+        continuous_inds : bool
+            Flag indicating whether moves affects a continuous region or not
+
+        Returns
+        -------
+        dE_marks : float
+            Change in energy assocaited with the polumer configuration
         """
         # for now, do not actually use the fact that some moves do not affect
         # certain parts of the polymer for any optimization. Fill in any `None`
         # values with the old state of the polymer explicitly.
-        inds = proposal[0]
-        r, t3, t2, states = MCAdapter.replace_none(poly, *proposal)
+        r, t3, t2, states = MCAdapter.replace_none(
+            poly,
+            inds,
+            r_trial,
+            t3_trial,
+            t2_trial,
+            states_trial,
+            continuous_inds
+        )
         r = np.atleast_2d(r)
         t3 = np.atleast_2d(t3)
         t2 = np.atleast_2d(t2)
