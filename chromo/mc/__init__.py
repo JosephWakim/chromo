@@ -15,7 +15,8 @@ import numpy as np
 
 # Custom Modules
 from .mc_sim import mc_sim
-from .moves import all_moves, MCAdapter
+from .moves import MCAdapter
+from .mc_controller import (all_moves, Controller, SimpleControl)
 from ..util.reproducibility import make_reproducible
 from ..components import Polymer
 from ..marks import Epigenmark
@@ -94,8 +95,8 @@ def simple_mc(
 def _polymer_in_field(
     polymers: List[Polymer], marks: List[Epigenmark],
     field: FieldBase, num_save_mc: STEPS, num_saves: SAVES,
-    mc_moves: Optional[List[MCAdapter]] = None,
-    random_seed: SEED = 0, output_dir: DIR = '.'
+    mc_move_controllers: Optional[List[Controller]] = None,
+    random_seed: Optional[SEED] = 0, output_dir: Optional[DIR] = '.'
 ):
     """
     Monte Carlo simulation of a tssWLC in a field.
@@ -116,37 +117,32 @@ def _polymer_in_field(
         Number of Monte Carlo steps to take between configuration save points
     num_saves : int
         Number of save points to make in Monte Carlo simulation
-    mc_moves : Optional[List[MCAdapter]]
-        Monte carlo move desired. Default of None uses all moves.
+    mc_move_controllers : Optional[List[Controller]]
+        Controllers for monte carlo moves desired; default of `None` activates
+        `SimpleControl` for all MC moves
+    random_seed : Optional[SEED]
+        Random seed for replication of simulation (default = 0)
     output_dir : Optional[Path]
         Path to output directory in which polymer configurations will be saved
         (default = '.')
     """
-    # Uncomment to remind the user to add a random seed
-    # warnings.warn("The random seed is currently ignored.", UserWarning)
-    if mc_moves is None:
-        mc_moves = all_moves
+    if mc_move_controllers is None:
+        mc_move_controllers = all_moves(output_dir, SimpleControl)
 
     for mc_count in range(num_saves):
-        mc_sim(polymers, marks, num_save_mc, mc_moves, field)
+        mc_sim(polymers, marks, num_save_mc, mc_move_controllers, field)
 
         for poly in polymers:
-            poly.to_csv(output_dir / Path(f"{poly.name}-{mc_count}.csv"))
-
-        for move in mc_moves:
-            move.performance_tracker.save_move_log(
-                output_dir / Path(
-                    f"{poly.name}-{mc_count}_{move.name}_move_amps.csv"
-                ),
-                output_dir / Path(
-                    f"{poly.name}-{mc_count}_{move.name}_bead_amps.csv"
-                ),
-                output_dir / Path(
-                    f"{poly.name}-{mc_count}_{move.name}_acceptance_rates.csv"
-                )
+            poly.to_csv(
+                output_dir / Path(f"{poly.name}-{mc_count}.csv")
             )
-
+        for controller in mc_move_controllers:
+            controller.move.performance_tracker.save_move_log(
+                snapshot=mc_count
+            )
         print("Save point " + str(mc_count) + " completed")
+    
+    # warnings.warn("The random seed is currently ignored.", UserWarning)
 
 
 polymer_in_field = make_reproducible(_polymer_in_field)

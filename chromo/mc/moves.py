@@ -54,7 +54,8 @@ class MCAdapter:
     """
 
     _proposal_arg_names = [
-        'inds', 'r', 't3', 't2', 'states', 'continuous_inds'
+        'inds', 'r', 't3', 't2', 'states', 'continuous_inds', 'bead_amp',
+        'move_amp'
     ]
 
     _proposal_arg_types = Tuple[
@@ -63,7 +64,9 @@ class MCAdapter:
         List[Tuple[float, float, float]],
         List[Tuple[float, float, float]],
         List[Epigenmark],
-        bool
+        bool,
+        BEAD_AMP,
+        MOVE_AMP
     ]
 
     _move_arg_types = [
@@ -74,6 +77,7 @@ class MCAdapter:
 
     def __init__(
         self,
+        log_path: str,
         move_func: Callable[_move_arg_types, _proposal_arg_types],
         decay_rate: float = 0.95
     ):
@@ -81,6 +85,8 @@ class MCAdapter:
 
         Parameters
         ----------
+        log_path : str
+            Path to log file tracking bead/move amplitudes and acceptance rate
         move_func : Callable[_move_arg_types, _proposal_arg_types]
             Functions representing Monte Carlo moves
         decay_rate : float
@@ -89,17 +95,23 @@ class MCAdapter:
         """
         self.name = move_func.__name__
         self.move_func = move_func
-
-        self.amp_move = 2 * np.pi
+        self.amp_move = 0.05            # 2 * np.pi
         self.num_per_cycle = 1
-        self.amp_bead = 10
+        self.amp_bead = 100             # 10
         self.num_attempt = 0
         self.num_success = 0
         self.move_on = True
-        self.performance_tracker = mc_stat.PerformanceTracker(decay_rate)
+        self.last_amp_move = None
+        self.last_amp_bead = None
+
+        self.performance_tracker =\
+            mc_stat.PerformanceTracker(log_path, decay_rate)
 
     def __str__(self):
         return f"MCAdapter<{self.name}>"
+
+    def to_file(self, path):
+        pass        
 
     def propose(self, polymer):
         """
@@ -149,12 +161,12 @@ class MCAdapter:
 
         """
         prop_names = MCAdapter._proposal_arg_names
-        kwargs = {prop_names[i]: proposal[i] for i in range(len(prop_names))}
+        kwargs = {prop_names[i]: proposal[i] for i in range(len(prop_names)-2)}
 
         # Remove inds and continuous_inds from proposal
         inds = kwargs.pop('inds')
         kwargs.pop("continuous_inds")
-        prop_names = prop_names[1:len(prop_names)-1]
+        prop_names = prop_names[1:len(prop_names)-3]
         actual_proposal = []
         for i, name in enumerate(prop_names):
             prop = kwargs[name]
@@ -192,7 +204,7 @@ class MCAdapter:
 
         self.num_success += 1
         self.performance_tracker.update_acceptance_rate(accept=True)
-        self.performance_tracker.log_move(self.amp_move, self.amp_bead)
+        self.performance_tracker.log_move(self.last_amp_move, self.last_amp_bead)
         self.performance_tracker.log_acceptance_rate()
 
     def reject(self):
@@ -201,7 +213,7 @@ class MCAdapter:
         Log the rejected move in the performance tracker
         """
         self.performance_tracker.update_acceptance_rate(accept=False)
-        self.performance_tracker.log_move(self.amp_move, self.amp_bead)
+        self.performance_tracker.log_move(self.last_amp_move, self.last_amp_bead)
         self.performance_tracker.log_acceptance_rate()
 
 
@@ -232,8 +244,9 @@ def crank_shaft(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
     Returns
     -------
     _proposal_arg_types
-        Affected bead indices, their positions and orientations, and an
-        indicator that a continuous segment of beads were affected
+        Affected bead indices, their positions and orientations, an
+        indicator that a continuous segment of beads were affected,
+        and the move and bead amplitudes
     """
     delta_ind = min(np.random.randint(2, amp_bead), polymer.num_beads)
     ind0 = np.random.randint(polymer.num_beads - delta_ind)
@@ -242,7 +255,8 @@ def crank_shaft(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
     continuous_inds = True
     rot_angle = amp_move * (np.random.rand() - 0.5)
     r_trial, t3_trial = conduct_crank_shaft(polymer, ind0, indf, rot_angle)
-    return inds, r_trial, t3_trial, None, None, continuous_inds
+    return (inds, r_trial, t3_trial, None, None, continuous_inds, delta_ind,
+        rot_angle)
 
 
 def conduct_crank_shaft(
@@ -389,7 +403,8 @@ def end_pivot(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
     t3_trial = t3_trial[0:3, :].T
     t2_trial = t2_trial[0:3, :].T
 
-    return inds, r_trial, t3_trial, t2_trial, None, continuous_inds
+    return (inds, r_trial, t3_trial, t2_trial, None, continuous_inds, len(inds),
+        rot_angle)
 
 
 def conduct_end_pivot(
@@ -498,7 +513,8 @@ def slide(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
     r_trial = conduct_slide(r_points, slide_x, slide_y, slide_z)
     r_trial = r_trial[0:3, :].T
 
-    return inds, r_trial, None, None, None, continuous_inds
+    return (inds, r_trial, None, None, None, continuous_inds, len(inds),
+        translation_amp)
 
 
 def conduct_slide(
@@ -541,32 +557,32 @@ def tangent_rotation(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
 
     Begins by selecting some number of beads to undergo rotation based on the
     bead amplitude, requiring that at least one bead be selected if the move
-    is on. Loop through the number of beads undergoing the rotation; the
-    `one_bead_tangent_rotation` function hands selecting a random bead index
-    to undergo the rotation. The position and tangent vectors of the affected
-    beads are then reformatted, sorted, and for evaluation of energy change.
+    is on. Select a random rotation angle and loop through the number of beads
+    undergoing the rotation; the `one_bead_tangent_rotation` method handles
+    selection of a random bead index to undergo the rotation. The position and
+    tangent vectors of the affected beads are then reformatted, sorted, and
+    evaluated for energy change.
 
     Parameters
     ----------
     polymer : Polymer
         Polymer object
     amp_move : float
-        Fraction of maximum rotation space to rotate beads (between 0-1)
-        Scales spherical angles to a random value within a fraction of their
-        maximum values
+        Range of angles allowed for single tangent rotation move
     amp_bead : int
         Number of beads to randomly rotate
 
     """
     num_beads_to_move = max(int(np.random.uniform() * amp_bead), 1)
     num_beads = polymer.num_beads
+    rot_angle = amp_move * (np.random.rand() - 0.5)
 
     inds = []
     inds_t3_trial = []
     inds_t2_trial = []
     for i in range(num_beads_to_move):
         ind, ind_t3_trial, ind_t2_trial = one_bead_tangent_rotation(
-            polymer, inds, amp_move, num_beads
+            polymer, inds, rot_angle, num_beads
         )
         inds.append(ind)
         inds_t3_trial.append(ind_t3_trial)
@@ -583,13 +599,14 @@ def tangent_rotation(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
     t3_trial = np.vstack(t3_trial)
     t2_trial = np.vstack(t2_trial)
 
-    return inds, None, t3_trial, t2_trial, None, continuous_inds
+    return (inds, None, t3_trial, t2_trial, None, continuous_inds, len(inds),
+        rot_angle)
 
 
 def one_bead_tangent_rotation(
     polymer: Polymer,
     adjusted_beads: List[int],
-    amp_move: MOVE_AMP,
+    rot_angle: float,
     num_beads: int
 ):
     """
@@ -607,8 +624,8 @@ def one_bead_tangent_rotation(
         Polymer object
     adjusted_beads : List[int]
         List of beads affected by the tangent rotation move
-    amp_move : float
-        Fraction of 2 * pi maximum rotation to rotate bead (between 0-1)
+    rot_angle : float
+        Random angle by which to rotate a randomly selected bead
     num_beads : int
         Number of beads in the polymer
 
@@ -621,8 +638,6 @@ def one_bead_tangent_rotation(
     t2_trial : np.ndarray
         Trial t2 tangent of the rotated bead
     """
-    rot_angle = amp_move * np.random.uniform(0, 2 * np.pi)
-
     r_point = np.ones(4)
     t3_point = np.ones(4)
     t2_point = np.ones(4)
@@ -702,8 +717,25 @@ def conduct_tangent_rotation(
     return t3_trial, t2_trial
 
 
-all_moves = [
-    MCAdapter(move)
-    for move in
-    [crank_shaft, end_pivot, slide, tangent_rotation]
-]
+def all_moves(log_dir: str) -> List[MCAdapter]:
+    """Generate a list of all adaptable MC move objects.
+
+    NOTE: Use `all_moves` function in `chromo.mc.mc_controller` module to
+    create list of controllers for all moves. This function only creates
+    list of all moves, which may not be compatible with `mc_sim` function
+    in `chromo.mc.mc_sim` module.
+
+    Parameters
+    ----------
+    log_dir : str
+        Path to the directory in which to save log files
+    
+    Returns
+    -------
+    List of all adaptable MC move objects
+    """
+    return [
+        MCAdapter(log_dir + '/' + move.__name__, move) for move in [
+            crank_shaft, end_pivot, slide, tangent_rotation
+        ]
+    ]

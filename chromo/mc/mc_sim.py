@@ -13,13 +13,14 @@ from chromo.components import Polymer
 from chromo.marks import Epigenmark
 from chromo.fields import FieldBase
 from chromo.mc.moves import MCAdapter
+from chromo.mc.mc_controller import Controller
 
 
 def mc_sim(
     polymers: List[Polymer],
     epigenmarks: List[Epigenmark],
     num_mc_steps: int,
-    mc_moves: List[MCAdapter],
+    mc_move_controllers: List[Controller],
     field: FieldBase
 ):
     """Perform Monte Carlo simulation.
@@ -36,8 +37,8 @@ def mc_sim(
         Specification of epigenetic marks on polymer
     num_mc_steps: int
         Number of Monte Carlo steps to take between save points
-    mc_moves: List[MCAdapter]
-        List of Monte Carlo moves to perform during simulation
+    mc_move_controllers: List[Controller]
+        List of controllers for active MC moves in simulation
     field: FieldBase
         Field affecting polymer in Monte Carlo simulation
     """
@@ -46,11 +47,12 @@ def mc_sim(
         if (i+1) % 500 == 0:
             print("MC Step " + str(i+1) + " of " + str(num_mc_steps))
 
-        for adaptible_move in mc_moves:
-            if adaptible_move.move_on:
-                for j in range(adaptible_move.num_per_cycle):
+        for controller in mc_move_controllers:
+            if controller.move.move_on:
+                for j in range(controller.move.num_per_cycle):
                     for poly in polymers:
-                        mc_step(adaptible_move, poly, epigenmarks, field)
+                        mc_step(controller.move, poly, epigenmarks, field)
+                        controller.update_amplitudes()
 
 
 def mc_step(
@@ -61,7 +63,7 @@ def mc_step(
 ):
     """Compute energy change and determine move acceptance.
 
-    Get the proposed state of the polymer. Calculate the total (polymer + 
+    Get the proposed state of the polymer. Calculate the total (polymer +
     field) energy change associated with the move. Accept or reject the move
     based on the Metropolis Criterion.
 
@@ -77,11 +79,13 @@ def mc_step(
         Field affecting polymer in Monte Carlo step
     """
     proposal = adaptible_move.propose(poly)
+    adaptible_move.last_amp_bead = proposal[-2]
+    adaptible_move.last_amp_move = proposal[-1]
 
     dE = 0
-    dE += poly.compute_dE(*proposal)
+    dE += poly.compute_dE(*proposal[:-2])
     if poly in field:
-        dE += field.compute_dE(poly, *proposal)
+        dE += field.compute_dE(poly, *proposal[:-2])
 
     # Catch RuntimeWarning if the change in energy gets too large
     warnings.filterwarnings("error")

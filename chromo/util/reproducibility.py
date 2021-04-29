@@ -208,6 +208,3 @@ def to_file_params(non_builtins_kwargs, folder, suffix=''):
             raise ValueError(f"Argument not understood: {arg_name}={value}.\n"
                              "This simulation cannot be made reproducible.\n"
                              f"Please implement `.to_file` for type: {dtype}.")
-
-
-

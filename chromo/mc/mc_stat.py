@@ -2,6 +2,7 @@
 """
 
 # Built-in Modules
+import csv
 from typing import List
 
 
@@ -17,14 +18,17 @@ class PerformanceTracker:
     adjust move and bead amplitudes.
     """
 
-    def __init__(self, decay_rate: float):
+    def __init__(self, log_path: str, decay_rate: float):
         """Initialize the performance tracker object.
 
         Parameters
         ----------
+        log_path : str
+            Path to log file tracking bead/move amplitudes and acceptance rate
         decay_rate : float
             Factor by which to downweight historical acceptance rate in mean
         """
+        self.log_path = log_path
         self.decay_rate = decay_rate
 
         self.N = 0
@@ -33,6 +37,35 @@ class PerformanceTracker:
         self.amp_move_log: List[float] = []
         self.acceptance_log: List[float] = []
 
+        self.create_log_file()
+
+    def create_log_file(self):
+        """Create the log file tracking amplitudes and acceptance rates.
+
+        The log file will have five columns: snapshot count, iteration count
+        bead selection amplitude, move amplitude, and move acceptance rate.
+        
+        Snapshot count and will be recorded as constant values for each
+        snapshot. The iteration count, bead selection amplitude, move
+        amplitude, and move acceptance rate will be recorded for each iteration
+        in the snapshot.
+
+        This method simply creates the log file and adds the column labels. If
+        additional properties are to be logged, add them as column labels in
+        this method, and output them using the `save_move_log` method.
+        """
+        row_labels = [
+            "snapshot",
+            "iteration",
+            "bead_amp",
+            "move_amp",
+            "acceptance_rate"
+        ]
+        output = open(self.log_path, 'w')
+        w = csv.writer(output, delimiter=',')
+        w.writerow(row_labels)
+        output.close()
+    
     def update_acceptance_rate(self, accept: bool):
         """Increment acceptance rate based on an accepted or rejected step
 
@@ -73,26 +106,36 @@ class PerformanceTracker:
         """
         self.acceptance_log.append(self.acceptance_rate)
 
-    def save_move_log(
-        self, path_move_log: str, path_bead_log: str, path_accept_log: str
-    ):
+    def save_move_log(self, snapshot: int):
         """Save the move and bead amplitude log to a file and clear lists.
 
         Parameters
         ----------
-        path_move_log, path_bead_log, path_accept_log : str
-            Path names at which to save move/bead amplitude logs and
-            acceptance log.
+        snapshot : int
+            Current snapshot number, with which to label 
         """
-        with open(path_move_log, "w") as output:
-            for val in self.amp_move_log:
-                output.write(str(val) + '\n')
-        with open(path_bead_log, "w") as output:
-            for val in self.amp_bead_log:
-                output.write(str(val) + '\n')
-        with open(path_accept_log, "w") as output:
-            for val in self.acceptance_log:
-                output.write(str(val) + '\n')
+        num_iterations = len(self.amp_move_log)
+        if num_iterations != len(self.amp_bead_log):
+            raise ValueError(
+                "The number of bead selection amplitudes logged does not match \
+                the number of move amplitudes logged."
+            )
+        if num_iterations != len(self.acceptance_log):
+            raise ValueError(
+                "The number of move acceptance rates logged does not match the \
+                number of move amplitudes logged."
+            )
+        with open(self.log_path, 'a') as output:
+            w = csv.writer(output, delimiter=',')
+            for i in range(num_iterations):
+                row = [
+                    snapshot,
+                    i+1,
+                    self.amp_bead_log[i],
+                    self.amp_move_log[i],
+                    self.acceptance_log[i]
+                ]
+                w.writerow(row)
 
         self.amp_move_log = []
         self.amp_bead_log = []
