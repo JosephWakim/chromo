@@ -33,8 +33,10 @@ class PerformanceTracker:
 
         self.N = 0
         self.acceptance_rate = 0
-        self.amp_bead_log: List[float] = []
-        self.amp_move_log: List[float] = []
+        self.amp_bead_limit_log: List[float] = []
+        self.amp_move_limit_log: List[float] = []
+        self.amp_bead_realized_log: List[float] = []
+        self.amp_move_realized_log: List[float] = []
         self.acceptance_log: List[float] = []
 
         self.create_log_file()
@@ -57,8 +59,10 @@ class PerformanceTracker:
         row_labels = [
             "snapshot",
             "iteration",
-            "bead_amp",
-            "move_amp",
+            "bead_amp_limit",
+            "move_amp_limit",
+            "bead_amp_realized",
+            "move_amp_realized",
             "acceptance_rate"
         ]
         output = open(self.log_path, 'w')
@@ -86,20 +90,30 @@ class PerformanceTracker:
             (self.N - 1) * self.decay_rate + 1
         )
 
-    def log_move(self, amp_move: float, amp_bead: float):
+    def log_move(
+        self,
+        amp_move_limit: float,
+        amp_bead_limit: int,
+        amp_move: float,
+        amp_bead: int
+    ):
         """Add a proposed move to the log.
 
         Parameters
         ----------
+        amp_move_limit : float
+            Maximum move amplitude allowed at current MC step
+        amp_bead_limit : int
+            Maximum bead selection amplitude allowed at current MC step
         amp_move : float
             Amplitude of the proposed move
         amp_bead : float
             Selection amplitude of the proposed move
-        accept : bool
-            Indicator of whether or not the move was accepted
         """
-        self.amp_move_log.append(amp_move)
-        self.amp_bead_log.append(amp_bead)
+        self.amp_move_limit_log.append(amp_move_limit)
+        self.amp_bead_limit_log.append(amp_bead_limit)
+        self.amp_move_realized_log.append(amp_move)
+        self.amp_bead_realized_log.append(amp_bead)
 
     def log_acceptance_rate(self):
         """Log average acceptance rate, while decaying historical values.
@@ -114,8 +128,8 @@ class PerformanceTracker:
         snapshot : int
             Current snapshot number, with which to label 
         """
-        num_iterations = len(self.amp_move_log)
-        if num_iterations != len(self.amp_bead_log):
+        num_iterations = len(self.amp_move_realized_log)
+        if num_iterations != len(self.amp_bead_realized_log):
             raise ValueError(
                 "The number of bead selection amplitudes logged does not match \
                 the number of move amplitudes logged."
@@ -131,12 +145,16 @@ class PerformanceTracker:
                 row = [
                     snapshot,
                     i+1,
-                    self.amp_bead_log[i],
-                    self.amp_move_log[i],
+                    self.amp_bead_limit_log[i],
+                    self.amp_move_limit_log[i],
+                    self.amp_bead_realized_log[i],
+                    self.amp_move_realized_log[i],
                     self.acceptance_log[i]
                 ]
                 w.writerow(row)
 
-        self.amp_move_log = []
-        self.amp_bead_log = []
+        self.amp_move_limit_log = []
+        self.amp_bead_limit_log = []
+        self.amp_move_realized_log = []
+        self.amp_bead_realized_log = []
         self.acceptance_log = []

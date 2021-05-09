@@ -51,4 +51,4 @@ p = Polymer.straight_line_in_x(
 udf = UniformDensityField([p], marks, 20, 20, 20, 20, 20, 20)
 
 # Evaluate performance of the simulator for all moves
-mc.polymer_in_field([p], marks, udf, 1000, 1000, output_dir='output')
+mc.polymer_in_field([p], marks, udf, 1000, 50, output_dir='output')

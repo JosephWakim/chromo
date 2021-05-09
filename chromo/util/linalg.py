@@ -1,14 +1,39 @@
-"""Utility functions for linear algebra calculations."""
+"""Utility functions for linear algebra calculations.
+"""
+
+# Built-in Modules
+from typing import Tuple
+from random import uniform
+
+# External Modules
 import numpy as np
 from scipy.spatial.transform import Rotation
+
+
+def uniform_sample_unit_sphere():
+    """Randomly sample a vector on the unit sphere.
+
+    Returns
+    -------
+    Tuple[float, float, float]
+        Random (x, y, z) vector on unit sphere
+    """
+    phi = np.random.uniform() * (2 * np.pi)
+    theta = np.arccos(uniform(-1, 1))
+    return (
+        np.cos(phi) * np.sin(theta),    # x
+        np.sin(phi) * np.sin(theta),    # y
+        np.cos(theta)                   # z
+    )
+
 
 def arbitrary_axis_rotation(r0, r1, rot_angle):
     """
     Rotate about an axis defined by two points.
 
     Generate a transformation matrix for counterclockwise (right handed
-    convention) rotation of angle *rot_angle* about an arbitrary axis from
-    points *r0* to *r1*.
+    convention) rotation of angle `rot_angle` about an arbitrary axis from
+    points `r0` to `r1`.
 
     Parameters
     ----------
@@ -18,7 +43,7 @@ def arbitrary_axis_rotation(r0, r1, rot_angle):
         Second point defining axis to rotate around.
     rot_angle : float
         Angle of rotation. Positive rotation is counterclockwise when the
-        vector `r1 - r0` is pointing directly out of the blackboard.
+        vector `r1 - r0` is pointing directly out of the screen.
 
     Returns
     -------
@@ -71,5 +96,3 @@ def generate_translation_mat(delta_x, delta_y, delta_z):
     translation_mat[2, 3] = delta_z
 
     return translation_mat
-
-

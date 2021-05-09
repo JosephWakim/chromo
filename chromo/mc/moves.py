@@ -204,7 +204,12 @@ class MCAdapter:
 
         self.num_success += 1
         self.performance_tracker.update_acceptance_rate(accept=True)
-        self.performance_tracker.log_move(self.last_amp_move, self.last_amp_bead)
+        self.performance_tracker.log_move(
+            self.amp_move,
+            self.amp_bead,
+            self.last_amp_move,
+            self.last_amp_bead
+        )
         self.performance_tracker.log_acceptance_rate()
 
     def reject(self):
@@ -213,7 +218,12 @@ class MCAdapter:
         Log the rejected move in the performance tracker
         """
         self.performance_tracker.update_acceptance_rate(accept=False)
-        self.performance_tracker.log_move(self.last_amp_move, self.last_amp_bead)
+        self.performance_tracker.log_move(
+            self.amp_move,
+            self.amp_bead,
+            self.last_amp_move,
+            self.last_amp_bead
+        )
         self.performance_tracker.log_acceptance_rate()
 
 
@@ -248,7 +258,11 @@ def crank_shaft(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
         indicator that a continuous segment of beads were affected,
         and the move and bead amplitudes
     """
-    delta_ind = min(np.random.randint(2, amp_bead), polymer.num_beads)
+    delta_ind = np.min(
+        [np.max(
+            [np.random.randint(0, amp_bead), 2]
+        ), polymer.num_beads]
+    )
     ind0 = np.random.randint(polymer.num_beads - delta_ind)
     indf = ind0 + delta_ind
     inds = np.arange(ind0, indf)
@@ -343,15 +357,81 @@ def conduct_crank_shaft(
 
 def end_pivot(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
     """
-    Randomly rotate segment from one end of the polymer.
+    Randomly rotate segment from end of polymer about random axis.
 
     Stochastic component of end-pivot move. Begin by selecting a random
     rotation angle based on the move amplitude. Then isolate a random selection
     of beads on either the LHS or RHS of the polymer based on the move
     amplitude. Isolate the homogeneous coordinates for the selected beads, and
     format those coordinates for matrix multiplication. Perform the
-    transformation associated with the end pivot move, and reformat the
-    homogeneous coordinates as cartesian coordinates.
+    transformation associated with the end pivot move, with random axis of
+    rotation selected along the unit sphere. Reformat homogeneous coordinates
+    as cartesian coordinates.
+
+    Parameters
+    ----------
+    polymer : Polymer
+        Polymer object
+    amp_move : float
+        Maximum amplitude (rotation angle) of the end-pivot move
+    amp_bead : int
+        Maximum amplitude (number) of beads affected by the end-pivot move
+
+    Returns
+    -------
+    _proposal_arg_types
+        Affected bead indices, their positions and orientations, and an
+        indicator that a continuous segment of beads were affected
+    """
+    rot_angle = amp_move * (np.random.rand() - 0.5)
+
+    num_beads = polymer.num_beads
+    if np.random.randint(0, 2) == 0:    # rotate LHS
+        ind0 = 0
+        indf = beads.select_bead_from_left(
+            amp_bead, num_beads, exclude_last_bead=False
+        ) + 1
+    else:                               # rotate RHS
+        ind0 = beads.select_bead_from_right(
+            amp_bead, num_beads, exclude_first_bead=False
+        )
+        indf = num_beads + 1
+
+    inds = np.arange(ind0, indf)
+    continuous_inds = True
+    r_points = np.ones((4, indf-ind0))
+    r_points[0:3, :] = polymer.r[ind0:indf, :].T
+    r_rot_0 = (0, 0, 0)
+    r_rot_1 = linalg.uniform_sample_unit_sphere()
+    t3_points = np.ones((4, indf-ind0))
+    t3_points[0:3, :] = polymer.t3[ind0:indf, :].T
+    t2_points = np.ones((4, indf-ind0))
+    t2_points[0:3, :] = polymer.t2[ind0:indf, :].T
+
+    r_trial, t3_trial, t2_trial = conduct_end_pivot(
+        r_points, r_rot_0, r_rot_1, t3_points, t2_points, rot_angle
+    )
+    r_trial = r_trial[0:3, :].T
+    t3_trial = t3_trial[0:3, :].T
+    t2_trial = t2_trial[0:3, :].T
+
+    return (inds, r_trial, t3_trial, t2_trial, None, continuous_inds, len(inds),
+        rot_angle)
+
+
+def on_axis_end_pivot(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
+    """
+    Randomly rotate segment from end of polymer about axis w/ neighboring bead.
+
+    See documentation for `end_pivot` – the only difference comes in selection
+    of the rotation axis. While `end_pivot` selects a random rotation axis on
+    the unit sphere, `on_axis_end_pivot` selects the axis of rotation formed
+    from the vector connecting the inner-most bead affected by the move and its
+    inner neighboring bead on the chain.
+
+    NOTE: This move is currently inactive, but may be added in the future.
+    
+    TODO: If implementing this move, double check bead selection approach.
 
     Parameters
     ----------
@@ -381,24 +461,21 @@ def end_pivot(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
         indf = num_beads
         pivot_point = ind0
         base_point = ind0 - 1
+
     inds = np.arange(ind0, indf)
     continuous_inds = True
-
     r_points = np.ones((4, indf-ind0))
     r_pivot = polymer.r[pivot_point, :]
     r_base = polymer.r[base_point, :]
     r_points[0:3, :] = polymer.r[ind0:indf, :].T
-
     t3_points = np.ones((4, indf-ind0))
     t3_points[0:3, :] = polymer.t3[ind0:indf, :].T
-
     t2_points = np.ones((4, indf-ind0))
     t2_points[0:3, :] = polymer.t2[ind0:indf, :].T
 
     r_trial, t3_trial, t2_trial = conduct_end_pivot(
         r_points, r_pivot, r_base, t3_points, t2_points, rot_angle
     )
-
     r_trial = r_trial[0:3, :].T
     t3_trial = t3_trial[0:3, :].T
     t2_trial = t2_trial[0:3, :].T
@@ -425,10 +502,10 @@ def conduct_end_pivot(
     ----------
     r_points : array_like (4, N)
         Homogeneous coordinates for beads undergoing rotation
-    r_pivot : array_like (4,)
-        Homogeneous coordinates for beads about which the pivot occurs
-    r_base : array_like (4,)
-        Homogeneous coordinates for bead establishing axis of rotation
+    r0 : array_like (3,)
+        First coordinate of rotation axis
+    r1 : array_like (3,)
+        Second coordinate of rotation axis
     t3_points : array_like (4, N)
         Homogeneous tangent vectors for beads undergoing rotation
     t2_points : array_like (4, N)
@@ -445,7 +522,7 @@ def conduct_end_pivot(
     t2_trial : array_like (4, N)
         Homogeneous tangent vectors, orthogonal to t3_trial, following rotation
     """
-    rot_matrix = linalg.arbitrary_axis_rotation(r_pivot, r_base, rot_angle)
+    rot_matrix = linalg.arbitrary_axis_rotation(r0, r1, rot_angle)
     r_trial = rot_matrix @ r_points
     t3_trial = rot_matrix @ t3_points
     t2_trial = rot_matrix @ t2_points

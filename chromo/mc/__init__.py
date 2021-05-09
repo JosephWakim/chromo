@@ -127,7 +127,12 @@ def _polymer_in_field(
         (default = '.')
     """
     if mc_move_controllers is None:
-        mc_move_controllers = all_moves(output_dir, SimpleControl)
+        mc_move_controllers = all_moves(
+            log_dir=output_dir, 
+            polymers=polymers,
+            move_amp_bounds=(0.05,np.pi),
+            controller=SimpleControl
+        )
 
     for mc_count in range(num_saves):
         mc_sim(polymers, marks, num_save_mc, mc_move_controllers, field)

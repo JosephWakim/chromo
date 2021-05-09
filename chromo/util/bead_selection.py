@@ -12,10 +12,16 @@ def capped_exponential(window, cap=np.inf):
     """
     Select exponentially distributed integer below some capped value.
 
+    Specify the geometric distribution such that 99% of outcomes fall below
+    window. Do this by manipulating the argument of `np.random.geometric()`
+    and selecting a success probability such that the CDF of the geometric
+    distribution at `window` equals 0.99. This will significantly improve
+    runtime, particularly at the while loop.
+
     Parameters
     ----------
     window : int
-        Mean of the exponential distribution being sampled
+        99th percentile of the exponential distribution being sampled
     cap : int
         Maximum value of exponentially sampled integer 
     Returns
@@ -23,10 +29,16 @@ def capped_exponential(window, cap=np.inf):
     r : int
         Exponentially sampled random integer less than capped value
     """
+    eCDF_val_at_window = 0.99
+    p = 1 - (1 - eCDF_val_at_window) ** (1 / (window + 1))
 
-    r = np.random.geometric(1/window)
+    try:
+        r = np.random.geometric(p)
+    except:
+        raise ValueError("Selection window " + str(window) + " is less than 1.")
+
     while r > cap:
-        r = np.random.geometric(1/window)
+        r = np.random.geometric(p)
     return r
 
 def select_bead_from_left(window, N_beads, exclude_last_bead=True):
@@ -54,10 +66,10 @@ def select_bead_from_left(window, N_beads, exclude_last_bead=True):
     if window > N_beads:
         raise ValueError("Bead selection window size must be less than polymer length")
     
-    return capped_exponential(window, N_beads)
+    return capped_exponential(window, window)
 
 
-def select_bead_from_right(window, N_beads, exclude_first_bead = True):
+def select_bead_from_right(window, N_beads, exclude_first_bead=True):
     """
     Randomly select index exponentially decaying from right.
 
