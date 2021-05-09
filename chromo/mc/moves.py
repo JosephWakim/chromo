@@ -395,7 +395,7 @@ def end_pivot(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
         ind0 = beads.select_bead_from_right(
             amp_bead, num_beads, exclude_first_bead=False
         )
-        indf = num_beads + 1
+        indf = num_beads
 
     inds = np.arange(ind0, indf)
     continuous_inds = True
@@ -486,8 +486,8 @@ def on_axis_end_pivot(polymer: Polymer, amp_move: MOVE_AMP, amp_bead: BEAD_AMP):
 
 def conduct_end_pivot(
     r_points: List[Tuple[float, float, float]],
-    r_pivot: Tuple[float, float, float],
-    r_base: Tuple[float, float, float],
+    r0: Tuple[float, float, float],
+    r1: Tuple[float, float, float],
     t3_points: Tuple[float, float, float],
     t2_points: Tuple[float, float, float],
     rot_angle: float
@@ -522,7 +522,9 @@ def conduct_end_pivot(
     t2_trial : array_like (4, N)
         Homogeneous tangent vectors, orthogonal to t3_trial, following rotation
     """
-    rot_matrix = linalg.arbitrary_axis_rotation(r0, r1, rot_angle)
+    rot_matrix = linalg.arbitrary_axis_rotation(
+        np.array(r0), np.array(r1), rot_angle
+    )
     r_trial = rot_matrix @ r_points
     t3_trial = rot_matrix @ t3_points
     t2_trial = rot_matrix @ t2_points
