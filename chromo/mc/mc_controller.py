@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple, Dict
 # import numpy as np
 
 # Custom modules
-from chromo.components import Polymer
+from chromo.polymers import Polymer
 import chromo.mc.moves as mv
 
 
@@ -60,7 +60,7 @@ class Controller(ABC):
     def update_move_amplitude(self):
         """Update the move amplitude.
 
-        Use acceptance rate `self.move.performance_tracker.acceptance_rate`
+        Use acceptance rate `self.move.acceptance_tracker.acceptance_rate`
         to update the move amplitude.
         """
         pass
@@ -69,7 +69,7 @@ class Controller(ABC):
     def update_bead_amplitude(self):
         """Update the bead selection amplitude.
 
-        Use acceptance rate `self.move.performance_tracker.acceptance_rate`
+        Use acceptance rate `self.move.acceptance_tracker.acceptance_rate`
         to update the move amplitude.
         """
         pass
@@ -145,7 +145,7 @@ class SimpleControl(Controller):
         num_delta_beads : Optional[int]
             Number of beads by which to adjust bead amplitude (default = 1)
         """
-        acceptance = self.move.performance_tracker.acceptance_rate
+        acceptance = self.move.acceptance_tracker.acceptance_rate
 
         if acceptance < setpoint_acceptance:
             prop_move_amp = self.move.amp_move * move_adjust_factor
@@ -230,7 +230,7 @@ def all_moves(
             mv.MCAdapter(
                 str(log_dir) + '/' + move.__name__ + ".csv",
                 move,
-                decay_rate=0.95,
+                moves_in_average=20,
                 init_amp_bead=bead_amp_bounds[move.__name__][0],
                 init_amp_move=move_amp_bounds[move.__name__][0]
             ),

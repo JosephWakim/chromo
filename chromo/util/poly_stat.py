@@ -1,5 +1,4 @@
-"""
-Average Polymer Statistics
+"""Average Polymer Statistics
 
 Generate average polymer statistics from Monte Carlo simulation output. This
 module defines a PolyStat object, which reads polymer configurations from an
@@ -137,7 +136,7 @@ class PolyStat(object):
 			Average fourth moment end-to-end distance
 		"""
 		self.sample_beads(sampling_scheme)
-		avg_r4 = self.calc_r4_avg(windows)
+		avg_r4 = self.calc_r4_avg(bead_separation)
 		return avg_r4
 
 	def overlapping_slide_sample(self, bead_separation):
@@ -296,7 +295,7 @@ def main():
 	sampling = args.sampling
 	
 	# Create the PolyStat object
-	poly_stat = PolyStat(file_path)
+	poly_stat = PolyStat(data_path)
 
 	avg_r2_vec = []
 	for i in range(3, 501):

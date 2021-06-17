@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from chromo.components import Polymer
+from chromo.polymers import Chromatin
 from chromo.fields import UniformDensityField
 import chromo.marks
 
@@ -13,7 +13,7 @@ def test_uniform_density_field_roundtrip():
     marks = [chromo.marks.get_by_name('HP1')]
     marks = chromo.marks.make_mark_collection(marks)
 
-    p = Polymer.straight_line_in_x('Chr-1', 10, 1, states=np.zeros((10,)),
+    p = Chromatin.straight_line_in_x('Chr-1', 10, 1, states=np.zeros((10,)),
                                    mark_names=['HP1'])
 
     udf = UniformDensityField([p], marks, 10, 20, 30, 40, 50, 60)
@@ -39,7 +39,7 @@ def test_uniform_density_field_roundtrip():
 
     # should also error if the poly/mark has the wrong name
     with pytest.raises(ValueError):
-        p2 = Polymer.straight_line_in_x('Chr-1', 10, 1, states=np.zeros((10,)),
+        p2 = Chromatin.straight_line_in_x('Chr-1', 10, 1, states=np.zeros((10,)),
                                         mark_names=['HP1'])
         p2.name = "different"
         UniformDensityField.from_file(

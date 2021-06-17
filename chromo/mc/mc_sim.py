@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Custom Modules
-from chromo.components import Polymer
+from chromo.polymers import Polymer
 from chromo.marks import Epigenmark
 from chromo.mc.moves import MCAdapter
 from chromo.mc.mc_controller import Controller

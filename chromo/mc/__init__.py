@@ -18,7 +18,7 @@ from .mc_sim import mc_sim
 # from .moves import move_list
 from .mc_controller import all_moves, Controller, SimpleControl
 from ..util.reproducibility import make_reproducible
-from ..components import Polymer
+from ..polymers import Polymer, Chromatin
 from ..marks import Epigenmark
 from ..marks import get_by_name, make_mark_collection
 from ..fields import UniformDensityField
@@ -40,7 +40,7 @@ def simple_mc(
     z_width: float, nz: int, random_seed: Optional[SEED] = 0,
     output_dir: Optional[DIR] = '.'
 ) -> Callable[
-    [List[Polymer], List[Epigenmark], F, STEPS, SAVES, SEED, DIR], None
+    [List[Chromatin], List[Epigenmark], F, STEPS, SAVES, SEED, DIR], None
 ]:
     """Single line implementation of basic Monte Carlo simulation.
 
@@ -73,12 +73,12 @@ def simple_mc(
 
     Returns
     -------
-    Callable[[List[Polymer], List[Epigenmark], F, STEPS, SAVES, SEED,
+    Callable[[List[Chromtin], List[Epigenmark], F, STEPS, SAVES, SEED,
     DIR], None]
         Monte Carlo simulation of a tssWLC in a field
     """
     polymers = [
-        Polymer.straight_line_in_x(
+        Chromatin.straight_line_in_x(
             f'Polymer-{i}', num_beads, bead_length,
             states=np.zeros((num_beads, num_marks)),
             mark_names=num_marks*['HP1']
@@ -157,10 +157,14 @@ def _polymer_in_field(
                 output_dir / Path(f"{poly.name}-{mc_count}.csv")
             )
         for controller in mc_move_controllers:
-            controller.move.performance_tracker.save_move_log(
+            controller.move.acceptance_tracker.save_move_log(
                 snapshot=mc_count
             )
         print("Save point " + str(mc_count) + " completed")
+    for polymer in polymers:
+        polymer.update_log_path(
+            str(output_dir) + "/" + polymer.name + "_config_log.csv"
+        )
 
     # warnings.warn("The random seed is currently ignored.", UserWarning)
 

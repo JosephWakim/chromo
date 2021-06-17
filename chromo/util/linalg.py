@@ -19,11 +19,11 @@ def uniform_sample_unit_sphere() -> Tuple[float, float, float]:
     """
     phi = np.random.uniform() * (2 * np.pi)
     theta = np.arccos(uniform(-1, 1))
-    return (
+    return np.array([
         np.cos(phi) * np.sin(theta),    # x
         np.sin(phi) * np.sin(theta),    # y
         np.cos(theta)                   # z
-    )
+    ])
 
 
 def arbitrary_axis_rotation(axis, point, rot_angle):

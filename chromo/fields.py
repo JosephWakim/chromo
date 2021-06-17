@@ -361,7 +361,7 @@ class UniformDensityField(FieldBase):
         states = np.atleast_2d(states_trial)
         density_poly, index_xyz = self._calc_density(
             poly.r[inds, :],
-            np.atleast_2d(poly.states[inds]),
+            np.atleast_2d(poly.states[inds, :]),
             inds[0],
             inds[-1]+1
         )

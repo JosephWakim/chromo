@@ -172,3 +172,13 @@ sys.path.pop()
 
 # System Files
 *.DS_Store
+
+# Output directory of the simulator does not need to be tracked
+output
+
+# Plots in the test directory do not have to be tracked
+tests/plots/*
+
+# Plots evaluating runtime do not have to be tracked
+doc/source/Runtimes.png
+

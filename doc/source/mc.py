@@ -18,8 +18,8 @@ import numpy as np
 # Custom Modules
 import chromo
 import chromo.mc as mc
-from chromo.components import (
-    Polymer, helix_parametric_x, helix_parametric_y, helix_parametric_z
+from chromo.polymers import (
+    Chromatin, helix_parametric_x, helix_parametric_y, helix_parametric_z
 )
 import chromo.marks
 from chromo.fields import UniformDensityField
@@ -44,7 +44,7 @@ marks = chromo.marks.make_mark_collection(
 # Specify polymers length
 num_beads = 1000
 bead_spacing = 6.24     # 1/25 persistence length
-p = Polymer.arbitrary_path_in_x_y_z(
+p = Chromatin.arbitrary_path_in_x_y_z(
     'Chr-1',
     num_beads,
     bead_spacing,
