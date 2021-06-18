@@ -898,7 +898,7 @@ def helix_parametric_x(t: float) -> float:
     float
         Output to the shape function
     """
-    x = 60 * np.cos(t)
+    x = 180 * np.cos(t)
     return x
 
 
@@ -915,7 +915,7 @@ def helix_parametric_y(t: float) -> float:
     float
         Output to the shape function
     """
-    y = 60 * np.sin(t)
+    y = 180 * np.sin(t)
     return y
 
 
@@ -932,5 +932,5 @@ def helix_parametric_z(t: float) -> float:
     float
         Output to the shape function
     """
-    z = 20 * t
+    z = 60 * t
     return z
