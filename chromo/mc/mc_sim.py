@@ -73,6 +73,7 @@ def mc_sim(
     plt.ylabel("frequency")
     plt.tight_layout()
     plt.savefig("doc/source/Runtimes.png")
+    plt.close()
 
 
 def mc_step(

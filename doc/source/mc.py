@@ -42,8 +42,8 @@ marks = chromo.marks.make_mark_collection(
 )
 
 # Specify polymers length
-num_beads = 1000
-bead_spacing = 6.24     # 1/25 persistence length
+num_beads = 10000
+bead_spacing = 3.9     # 1/40 persistence length
 p = Chromatin.arbitrary_path_in_x_y_z(
     'Chr-1',
     num_beads,
@@ -69,8 +69,8 @@ udf = UniformDensityField(
 
 # Evaluate performance of the simulator for all moves
 polymers = [p]
-num_snapshots = 1
-mc_steps_per_snapshot = 1000
+num_snapshots = 200
+mc_steps_per_snapshot = 5000
 mc.polymer_in_field(
     [p],
     marks,

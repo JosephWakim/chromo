@@ -26,8 +26,8 @@ class Polymer(ABC):
     """
 
     required_attrs = [
-        "name", "r", "t3", "t2", "marks", "mark_names", "num_marks",
-        "beads", "num_beads"
+        "name", "r", "t3", "t2", "states", "mark_names", "num_marks",
+        "beads", "num_beads", "lp"
     ]
 
     _arrays = 'r', 't3', 't2', 'states'     # arrays saved to file
@@ -87,6 +87,7 @@ class Polymer(ABC):
         self.update_log_path(log_path)
         if states is not None:
             self.check_marks(states, mark_names)
+        self.lp = None
 
     @abstractmethod
     def compute_dE(self):
@@ -120,6 +121,10 @@ class Polymer(ABC):
                 raise NotImplementedError(
                     "Polymer subclass missing required attribute: " + attr
                 )
+        if self.lp is None:
+            raise ValueError(
+                "Specify the persistence length in the subclass of Polymer"
+            )
 
     def check_marks(self, states, mark_names):
         """Verify that specified mark states and names are valid.
@@ -366,6 +371,10 @@ class Chromatin(Polymer):
     ):
         """Construct a `Chromatin` fiber object as a subclass of `Polymer`.
 
+        Because the persistence length of chromatin is fixed at 53 nm, or
+        53 / 0.34 base pairs, it will be hard-coded into the `Chromatin` class
+        as the `lp` attribute.
+
         NOTE: For now, when loading polymer parameters for confirmational
         energy, the array-like of `bead_length` is ignored.
 
@@ -401,9 +410,12 @@ class Chromatin(Polymer):
             name, r, t3=t3, t2=t2, states=states, mark_names=mark_names,
             log_path=log_path
         )
+        # Simulation units are in bsae pairs
+        self.lp = 53 / 0.34     # persistence length in base pairs
         self.delta, self.eps_bend, self.eps_par,\
             self.eps_perp, self.gamma, self.eta \
             = self._find_parameters(bead_length[0])
+        self.check_attrs()
 
     def construct_beads(self) -> Dict[int, beads.Bead]:
         """Construct Nucleosome objects forming beads of our Chromatin polymer.
@@ -617,9 +629,12 @@ class Chromatin(Polymer):
         """
         return f"Polymer_Class<Chromatin>" + super(Chromatin, self).__str__()
 
-    @staticmethod
-    def _find_parameters(length_bead):
+    def _find_parameters(self, length_bead):
         """Look up elastic parameters of ssWLC for each bead_length.
+
+        TODO: Verify and update documentation given `self.lp`.
+
+        TODO: Check definition of `delta`.
 
         Note the following properties:
 
@@ -653,7 +668,7 @@ class Chromatin(Polymer):
         Returns
         -------
         delta : float
-            Bead spacing in nanometers
+            Bead spacing in units of simulation (in our case, this is bps)
         eps_bend : float
             Bending modulus
         eps_par : float
@@ -665,11 +680,9 @@ class Chromatin(Polymer):
         eta : float
             Bend-shear coupling
         """
-        lp_DNA_nm = 53
-        nm_per_bp = 0.34
-        length_dim = length_bead * nm_per_bp / lp_DNA_nm
-        lp = lp_DNA_nm / nm_per_bp
-        delta = length_bead * nm_per_bp
+        length_dim = length_bead / self.lp
+        lp = self.lp
+        delta = length_dim
 
         eps_bend = np.interp(length_dim, dss_params[:, 0], dss_params[:, 1]) \
             / length_dim

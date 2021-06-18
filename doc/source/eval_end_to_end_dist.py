@@ -11,11 +11,13 @@ import matplotlib.pyplot as plt
 
 from doc.source.poly_vis import get_latest_simulation
 import chromo.util.poly_stat as ps
+import chromo.polymers as polymers
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 os.chdir(cwd + '/../../output')
 
 sim = get_latest_simulation()
+# sim = "sim_20"
 num_equilibration_steps = 90
 
 print("Sim: " + sim)
@@ -32,9 +34,9 @@ output_files = [
     if sorted_snap[i] > num_equilibration_steps - 1
 ]
 
-os.chdir(cwd)
+os.chdir(parent_dir)
 
-bead_range = np.arange(1, 400, 1)
+bead_range = np.arange(1, 2000, 5)
 average_squared_e2e = np.zeros((len(bead_range), 1))
 
 for j, window_size in enumerate(bead_range):
@@ -45,15 +47,17 @@ for j, window_size in enumerate(bead_range):
             print("Snapshot: " + str(i+1) + " of " + str(len(output_files)))
             print()
 
-        poly_stat = ps.PolyStat("output/" + sim + "/" + f)
+        output_path = "output/" + sim + "/" + f
+        polymer = polymers.Chromatin.from_file(output_path, name=f)
+        poly_stat = ps.PolyStats(polymer, "overlap")
         r2.append(
-            poly_stat.get_avg_r2(
-                sampling_scheme="overlap_slide", bead_separation=window_size
+            poly_stat.calc_r2(
+                windows=poly_stat.load_indices(window_size)
             )
         )
     average_squared_e2e[j] = np.average(r2)
 
-bead_range = bead_range / 50     # Convert x axis to number of kuhn lengths
+bead_range = bead_range / 80     # Convert x axis to number of kuhn lengths
 
 os.chdir(output_dir)
 with open("avg_squared_e2e.txt", "w") as output_file:
@@ -62,8 +66,8 @@ with open("avg_squared_e2e.txt", "w") as output_file:
 
 plt.figure()
 plt.scatter(bead_range, average_squared_e2e)
-plt.xlabel("Kuhn lengths")
-plt.ylabel("Average squared end-to-end dist.")
+plt.xlabel(r"$L/(2l_p)$")
+plt.ylabel(r"$\langle R^2 \rangle /(2l_p)^2$")
 plt.yscale("log")
 plt.xscale("log")
 plt.savefig("Squared_e2e_vs_dist_v2.png", dpi=600)
@@ -72,8 +76,8 @@ os.chdir(cwd)
 os.chdir(output_dir)
 plt.figure()
 plt.scatter(np.log10(bead_range), np.log10(average_squared_e2e))
-plt.xlabel("Log Kuhn lengths")
-plt.ylabel("Log average squared end-to-end dist.")
+plt.xlabel(r"Log $L/(2l_p)$")
+plt.ylabel(r"$\langle R^2 \rangle /(2l_p)^2$")
 # short_range_behavior
 ref_x = [np.log10(bead_range[0])]
 ref_y = [np.log10(average_squared_e2e[0])]
