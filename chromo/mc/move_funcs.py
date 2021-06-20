@@ -561,7 +561,8 @@ def conduct_tangent_rotation(
 
 def full_chain_rotation(
     polymer: Polymer,
-    amp_move: MOVE_AMP
+    amp_move: MOVE_AMP,
+    **kwargs
 ) -> _proposal_arg_types:
     """
     Rotate an entire polymer about an arbitrary axis.
@@ -615,7 +616,8 @@ def full_chain_rotation(
 
 def full_chain_translation(
     polymer: Polymer,
-    amp_move: MOVE_AMP
+    amp_move: MOVE_AMP,
+    **kwargs
 ) -> _proposal_arg_types:
     """
     Translate an entire polymer in an arbitrary direction.
@@ -652,6 +654,140 @@ def full_chain_translation(
     r_trial = r_trial[0:3].T
 
     return (
-        inds, r_trial, None, None, None, continuous_inds, num_beads,
+        inds, r_trial, None, None, None, continuous_inds, None,
         translation_amp
     )
+
+
+# Change Binding States
+
+def change_binding_state(
+    polymer: Polymer,
+    *
+    amp_bead: BEAD_AMP,
+    **kwargs
+) -> _proposal_arg_types:
+    """Flip the binding state of a mark.
+
+    Before applying the move, check that the polymer has any marks at all.
+
+    Begin the move by identifying the number of binding sites that each bead
+    has for the particular mark. Then randomly select a bead in the chain.
+    Select a second bead from a two sided decaying exponential distribution
+    around the index of first. Replace the binding state of the selected beads.
+
+    In our model, we do not track the binding state of individual tails. We
+    care only about how many tails are bound. Therefore, for each move, we will
+    generate a random order of bound and unbound tails and will flip the state
+    of the first M tails in that order.
+
+    NOTE: This function assumes that polymers are formed from a single type of
+    bead object. if different types of bead objects exist, then the first two
+    if-statements that reference `bead[0]` will need to be generalized.
+
+    Parameters
+    ----------
+    polymer : Polymer
+        Polymer object on which the move is applied
+    mark_ind : int
+        Index of marks bound to the polymer on which the swap will take place
+    amp_bead : BEAD_AMP
+        Maximum range of beads to which a binding state swap will take palce
+
+    Returns
+    -------
+    _proposal_arg_types
+        Affected bead indices, their positions and orientations, and an
+        indicator that a continuous segment of beads were affected
+    """
+    if polymer.beads[0].mark_names is None:
+        return None, None, None, None, None, None, None, None
+
+    num_marks = len(polymer.beads[0].mark_names)
+    mark_ind = np.random.choice(np.arange(num_marks))
+    num_tails = polymer.beads[0].marks[mark_ind].sites_per_bead
+    num_beads = polymer.num_beads
+    bound_0 = np.random.randint(num_beads)
+    bound_1 = max(
+        int(beads.select_bead_from_point(amp_bead, num_beads, bound_0)), 1
+    )
+    ind0, indf = beads.check_bead_bounds(bound_0, bound_1, num_beads)
+    inds = np.arange(ind0, indf)
+    continuous_inds = True
+    possible_flips = np.arange(1, num_tails + 1, 1)
+    prob_bounds = [
+        1 / possible_flips * (i + 1) for i in range(len(possible_flips) - 1)
+    ]
+    rand_val = np.random.random()
+    for i in range(len(prob_bounds)):
+        if rand_val > i:
+            num_tails_flipped = possible_flips[i]
+            break
+    states = conduct_change_binding_states(
+        polymer, inds, mark_ind, num_tails, num_tails_flipped
+    )
+    return inds, None, None, None, states, continuous_inds, amp_bead, None
+
+
+def conduct_change_binding_states(
+    polymer: Polymer,
+    inds: np.ndarray,
+    mark_ind: int,
+    num_tails: int,
+    num_tails_flipped: int
+) -> np.ndarray:
+    """Deterministic component of the change binding state move.
+
+    Parameters
+    ----------
+    polymer : Polymer
+        Polymer object on which the move is applied
+    inds : np.ndarray (M, )
+        Bead indices in the polymer to which the change binding state move is
+        applied
+    mark_ind : int
+        Index of the mark for which the state is being swapped; the value
+        represents the column of the states array affected by the move
+    num_tails : int
+        Number of binding sites of the bead for the particular mark being
+        flipped by the move.
+    num_tails_flipped : int
+        Number of binding sites on the bead to flip
+
+    Returns
+    -------
+    np.ndarray (M, N)
+        Array of binding states for the all N marks (not just the swapped mark)
+        at the M swapped beads
+    """
+    states = polymer.states[inds, :]
+    for i in range(len(inds)):
+        states[i, mark_ind] = get_new_state(
+            states[i, mark_ind], num_tails, num_tails_flipped
+        )
+    return states
+
+
+def get_new_state(state: int, num_tails: int, num_tails_flipped: int) -> int:
+    """Get a next binding state of a bead.
+
+    Parameters
+    ----------
+    state : int
+        Current binding state of the bead – how many bead tails are bound
+    num_tails : int
+        Number of tails for the particular mark which may be bound
+    num_tails_flipped : int
+        Number of tails for the particular mark which are swapped
+
+    Returns
+    -------
+    int
+        Number of tails that are marked after the move
+    """
+    binding_seq = np.random.shuffle(
+        np.array([1] * state + [0] * (num_tails - state))
+    )
+    for i in range(num_tails_flipped):
+        binding_seq[i] = (binding_seq[i] + 1) % 2
+    return np.sum(binding_seq)

@@ -21,6 +21,7 @@ class Mark:
     """In order for our code to work, all marks need a string name."""
 
     name: str
+    sites_per_bead: int
 
 
 @dataclasses.dataclass
@@ -32,7 +33,7 @@ class Epigenmark(Mark):
     chemical_potential: float
 
 
-hp1 = Epigenmark('HP1', bind_energy=1, interaction_energy=1,
+hp1 = Epigenmark('HP1', sites_per_bead=2, bind_energy=1, interaction_energy=1,
                  chemical_potential=1)
 """
 Heterochromatin Protein 1, binds H3K9me marks.

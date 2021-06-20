@@ -42,7 +42,7 @@ marks = chromo.marks.make_mark_collection(
 )
 
 # Specify polymers length
-num_beads = 10000
+num_beads = 400000
 bead_spacing = 3.9     # 1/40 persistence length
 p = Chromatin.arbitrary_path_in_x_y_z(
     'Chr-1',

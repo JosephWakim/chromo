@@ -3,12 +3,13 @@
 
 # Built-in Modules
 from abc import ABC, abstractmethod
-from typing import (Sequence, Optional)
+from typing import (Sequence, Optional, List)
 
 # External Modules
 import numpy as np
 
 # Custom Modules
+from marks import Mark, get_by_name
 from .util import linalg as la
 from .util.gjk import gjk_collision
 
@@ -16,6 +17,47 @@ from .util.gjk import gjk_collision
 class Bead(ABC):
     """Abstract class representation of a bead of a polymer.
     """
+
+    def __init__(
+        self,
+        id: int,
+        r: np.ndarray,
+        t3: np.ndarray,
+        t2: np.ndarray,
+        states: Optional[np.ndarray] = None,
+        mark_names: Optional[Sequence[str]] = None
+    ):
+        """Initialize the bead object.
+
+        These are the required attributes that any type of bead must have for
+        proper compatibility with the rest of the simulator.
+
+        Parameters
+        ----------
+        id : int
+            Bead identifier
+        r : np.ndarray (3,)
+            Coordinates of the nucleosome in form (x, y, z)
+        t3, t2 : np.ndarray (3,)
+            Tangent vectors defining orientation of nucleosomes
+        states : Optional[np.ndarray] (M, ) of int
+            State of each of the M marks being tracked, default = None
+        mark_names : Optional[Sequence[str]] (M, )
+            The name of each chemical modification tracked in `states`, for
+            each of tracking which mark is which. Mark names are how the
+            properties of the mark are obtained, default = None
+        """
+        self.id = id
+        self.r = r
+        self.t3 = t3
+        self.t2 = t2
+        self.states = states
+        self.mark_names = mark_names
+        if mark_names is not None:
+            self.marks: Optional[List[Mark]] =\
+                [get_by_name(name) for name in mark_names]
+        else:
+            self.marks = None
 
     @abstractmethod
     def test_collision(self):
@@ -62,19 +104,16 @@ class DetailedNucleosome(Bead):
             are defined around the origin, with orientations such that t3
             coincides with the positive x axis and t2 coincides with the
             positive z axis.
-        states : (M, ) array_like of int
+        states : Optional[np.ndarray] (M, ) of int
             State of each of the M epigenetic marks being tracked
-        mark_names : (M, ) str or Sequence[str]
+        mark_names : Optional[Sequence[str]] (M, )
             The name of each chemical modification tracked in `states`, for
             each of tracking which mark is which.
         """
-        self.id = id
-        self.r = r
-        self.t3 = t3
-        self.t2 = t2
+        super(DetailedNucleosome, self).__init__(
+            id, r, t3, t2, states, mark_names
+        )
         self.vertices = vertices
-        self.states = states
-        self.mark_names = mark_names
 
     @classmethod
     def construct_nucleosome(
@@ -108,9 +147,9 @@ class DetailedNucleosome(Bead):
             nucleosome's verticies. The `width` gives the diameter of the
             circle circumscribing the base of the prism. The `height` gives
             the height of the prism.
-        states : (M, ) array_like of int
+        states : Optional[np.ndarray] (M, ) of int
             State of each of the M epigenetic marks being tracked
-        mark_names : (M, ) str or Sequence[str]
+        mark_names : Optional[Sequence[str]] (M, )
             The name of each chemical modification tracked in `states`, for
             each of tracking which mark is which.
         """
@@ -248,13 +287,9 @@ class Nucleosome(Bead):
             The name of each chemical modification tracked in `states`, for
             each of tracking which mark is which.
         """
-        self.id = id
-        self.r = r
-        self.t3 = t3
-        self.t2 = t2
+        super(Nucleosome, self).__init__(id, r, t3, t2, states, mark_names)
         self.bead_length = bead_length
         self.rad = rad
-        self.states = states
         self.mark_names = mark_names
 
     def test_collision(self, point: np.ndarray) -> bool:

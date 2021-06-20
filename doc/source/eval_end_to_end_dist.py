@@ -36,26 +36,36 @@ output_files = [
 
 os.chdir(parent_dir)
 
-bead_range = np.arange(1, 2000, 5)
+log_vals = np.arange(-2, 3, 0.05)
+bead_range = 10 ** log_vals * 80
+bead_range = bead_range.astype(int)
+bead_range = np.array(
+    [bead_range[i] for i in range(len(bead_range)) if bead_range[i] > 0]
+)
+bead_range = np.unique(bead_range)
 average_squared_e2e = np.zeros((len(bead_range), 1))
 
 for j, window_size in enumerate(bead_range):
-    print("!!!!! WINDOW SIZE: " + str(window_size) + " !!!!!")
-    r2 = []
-    for i, f in enumerate(output_files):
-        if (i+1) % 10 == 0:
-            print("Snapshot: " + str(i+1) + " of " + str(len(output_files)))
-            print()
+    if window_size > 0:
+        print("!!!!! WINDOW SIZE: " + str(window_size) + " !!!!!")
+        r2 = []
+        for i, f in enumerate(output_files):
+            if (i+1) % 10 == 0:
+                print("Snapshot: " + str(i+1) + " of " + str(len(output_files)))
+                print()
 
-        output_path = "output/" + sim + "/" + f
-        polymer = polymers.Chromatin.from_file(output_path, name=f)
-        poly_stat = ps.PolyStats(polymer, "overlap")
-        r2.append(
-            poly_stat.calc_r2(
-                windows=poly_stat.load_indices(window_size)
+            output_path = "output/" + sim + "/" + f
+            polymer = polymers.Chromatin.from_file(output_path, name=f)
+            # Retrieve the kuhn length only once, since it is the same
+            if j == 0 and i == 0:
+                kuhn_length = 2 * polymer.lp
+            poly_stat = ps.PolyStats(polymer, "overlap")
+            r2.append(
+                poly_stat.calc_r2(
+                    windows=poly_stat.load_indices(window_size)
+                )
             )
-        )
-    average_squared_e2e[j] = np.average(r2)
+        average_squared_e2e[j] = np.average(r2)
 
 bead_range = bead_range / 80     # Convert x axis to number of kuhn lengths
 
@@ -73,26 +83,13 @@ plt.xscale("log")
 plt.savefig("Squared_e2e_vs_dist_v2.png", dpi=600)
 os.chdir(cwd)
 
+# Plot the mean squared end-to-end distance on a log-log plot
 os.chdir(output_dir)
 plt.figure()
 plt.scatter(np.log10(bead_range), np.log10(average_squared_e2e))
 plt.xlabel(r"Log $L/(2l_p)$")
 plt.ylabel(r"$\langle R^2 \rangle /(2l_p)^2$")
-# short_range_behavior
-ref_x = [np.log10(bead_range[0])]
-ref_y = [np.log10(average_squared_e2e[0])]
-step = 0.01
-for i in range(1, 200):
-    ref_x.append(ref_x[i-1] + step)
-    ref_y.append(ref_y[i-1] + 2 * step)
-plt.plot(ref_x, ref_y)
-
-ref_x = [np.log10(bead_range[-1])]
-ref_y = [np.log10(average_squared_e2e[-1])]
-step = 0.01
-for i in range(1, 200):
-    ref_x.append(ref_x[i-1] - step)
-    ref_y.append(ref_y[i-1] - 1 * step)
-plt.plot(ref_x, ref_y)
+r2_theory = 2 * (bead_range / 2 - (1 - np.exp(-(2) * bead_range)) / (2) ** 2)
+plt.plot(np.log10(bead_range), np.log10(r2_theory))
 plt.savefig("Log_Log_Squared_e2e_vs_dist_v2.png", dpi=600)
 os.chdir(cwd)

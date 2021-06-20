@@ -12,15 +12,6 @@ data, though the results are biased by central beads which exist in multiple
 bins of the average. Non-overlapping sliding windows reduce the bias in the
 results, but include fewer samples in the average.
 
-TODO: Update the `eval_end_to_end_dist.py` file to reflect this new
-`poly_stat.py` module. This will involve instantiating polymer objects from
-the output files.
-
-TODO: Find a way of normalizing the polymer statistics by persistence length.
-This will involve adding an attribute to the polymer object for persistence
-length. This may be hard-coded for chroamtin, since it is a fixed value but
-still must appear in an attribute.
-
 Joseph Wakim
 Spakowitz Lab
 Modified: June 17, 2021
