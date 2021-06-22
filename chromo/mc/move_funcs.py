@@ -97,14 +97,17 @@ def crank_shaft(
     r_points[0:3] = polymer.r[inds].T
     t3_points = np.zeros((4, indf-ind0))
     t3_points[0:3] = polymer.t3[inds].T
-    r_trial, t3_trial = conduct_crank_shaft(
-        r_points, t3_points, axis, rot_angle
+    t2_points = np.zeros((4, indf-ind0))
+    t2_points[0:3] = polymer.t2[inds].T
+    r_trial, t3_trial, t2_trial = conduct_crank_shaft(
+        r_points, t3_points, t2_points, axis, rot_angle
     )
     r_trial = r_trial[0:3].T
     t3_trial = t3_trial[0:3].T
+    t2_trial = t2_trial[0:3].T
 
     return (
-        inds, r_trial, t3_trial, None, None, continuous_inds, len(inds),
+        inds, r_trial, t3_trial, t2_trial, None, continuous_inds, len(inds),
         rot_angle
     )
 
@@ -144,6 +147,7 @@ def get_crank_shaft_axis(
 def conduct_crank_shaft(
     r_points: np.ndarray,
     t3_points: np.ndarray,
+    t2_points: np.ndarray,
     axis: np.ndarray,
     rot_angle: float
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -158,7 +162,7 @@ def conduct_crank_shaft(
     ----------
     r_points : array_like (4, N)
         Homogeneous coordinates for beads undergoing rotation.
-    t3_points : array_like (4, N)
+    t3_points, t2_points : array_like (4, N)
         Homogeneous tangent vectors for beads undergoing rotation
     axis : array_like (3,)
         Rotation axis
@@ -170,19 +174,16 @@ def conduct_crank_shaft(
     -------
     r_trial : array_like (4, N)
         Homogeneous coordinates of beads following rotation
-    t3_trial : array_like (4, N)
+    t3_trial, t2_trial : array_like (4, N)
         Homogeneous tangent vectors for beads following rotation
     """
-    r_trial = np.ones(r_points.shape)
-    t3_trial = np.zeros(r_points.shape)
+    point = r_points[0:3, 0].flatten()
+    rot_matrix = linalg.arbitrary_axis_rotation(axis, point, rot_angle)
+    r_trial = rot_matrix @ r_points
+    t3_trial = rot_matrix @ t3_points
+    t2_trial = rot_matrix @ t2_points
 
-    for i in range(r_points.shape[1]):
-        r_ind = np.dot(r_points[0:3, i], axis) * axis + r_trial[0:3, 0]
-        rot_matrix = linalg.arbitrary_axis_rotation(axis, r_ind, rot_angle)
-        r_trial[:, i] = rot_matrix @ r_points[:, i]
-        t3_trial[:, i] = rot_matrix @ t3_points[:, i]
-
-    return r_trial, t3_trial
+    return r_trial, t3_trial, t2_trial
 
 
 # End Pivot Move
