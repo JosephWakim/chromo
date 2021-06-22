@@ -129,7 +129,9 @@ def _polymer_in_field(
     poly_len = np.min([polymer.r.shape[0] for polymer in polymers])
     min_bead_length = np.min([polymer.bead_length for polymer in polymers])
     bead_amp_bounds = {
-        "crank_shaft": (5, poly_len),
+        "crank_shaft": (
+            int(poly_len/2 - poly_len/20), int(poly_len/2 + poly_len/20)
+        ),
         "slide": (4, poly_len),
         "end_pivot": (
             int(poly_len/2 - poly_len/20), int(poly_len/2 + poly_len/20)
@@ -137,7 +139,7 @@ def _polymer_in_field(
         "tangent_rotation": (1, poly_len)
     }
     move_amp_bounds = {
-        "crank_shaft": (0.001, 0.01),
+        "crank_shaft": (0.05, np.pi),
         "slide": (0.05, 4 * min_bead_length),
         "end_pivot": (0.05, np.pi),
         "tangent_rotation": (0.05, np.pi)

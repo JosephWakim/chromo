@@ -177,7 +177,7 @@ def conduct_crank_shaft(
     t3_trial = np.zeros(r_points.shape)
 
     for i in range(r_points.shape[1]):
-        r_ind = np.dot(r_points[0:3, i], axis) * axis
+        r_ind = np.dot(r_points[0:3, i], axis) * axis + r_trial[0:3, 0]
         rot_matrix = linalg.arbitrary_axis_rotation(axis, r_ind, rot_angle)
         r_trial[:, i] = rot_matrix @ r_points[:, i]
         t3_trial[:, i] = rot_matrix @ t3_points[:, i]
