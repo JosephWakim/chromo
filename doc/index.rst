@@ -7,10 +7,10 @@ Welcome to Chromo's documentation!
 ==================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
-
+   modules
 
 Indices and tables
 ==================
