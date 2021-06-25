@@ -371,7 +371,6 @@ class Rouse(Polymer):
         pass
 
 
-
 class SSWLC(Polymer):
     """The positions and chemical state of a discrete polymer.
 
@@ -966,8 +965,8 @@ class Chromatin(SSWLC):
         """
         lp = 53 / 0.34     # persistence length in base pairs
         super(Chromatin, self).__init__(
-            name, r, bead_length, lp, t3=t3, t2=t2, states=states,
-            mark_names=mark_names, log_path=log_path
+            name, r, bead_length=bead_length, lp=lp, t3=t3, t2=t2,
+            states=states, mark_names=mark_names, log_path=log_path
         )
 
     def construct_beads(self) -> Dict[int, beads.Bead]:
