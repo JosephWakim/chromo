@@ -127,7 +127,6 @@ def _polymer_in_field(
         (default = '.')
     """
     poly_len = np.min([polymer.r.shape[0] for polymer in polymers])
-    # min_bead_length = np.min([polymer.bead_length for polymer in polymers])
     bead_amp_bounds = {
         "crank_shaft": (20, poly_len),
         "slide": (4, poly_len),

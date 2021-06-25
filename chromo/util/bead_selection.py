@@ -1,5 +1,4 @@
-"""
-Utility functions for random bead selection.
+"""Utility functions for random bead selection.
 """
 # Built-in Modules
 import random
@@ -23,6 +22,7 @@ def capped_exponential(window, cap=np.inf):
         99th percentile of the exponential distribution being sampled
     cap : int
         Maximum value of exponentially sampled integer
+
     Returns
     -------
     r : int

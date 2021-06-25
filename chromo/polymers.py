@@ -3,6 +3,7 @@
 Various types of polymers, solvents, and other simulation components should be
 defined here.
 """
+
 # Built-in Modules
 from abc import ABC, abstractmethod
 from typing import (Callable, Sequence, Optional, Dict, List)
@@ -331,7 +332,47 @@ class Polymer(ABC):
         return self.r.shape[0]
 
 
-class Chromatin(Polymer):
+class Rouse(Polymer):
+    """Class representation of a Rouse polymer.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        r: np.ndarray,
+        *,
+        lp: float,
+        states: Optional[np.ndarray] = None,
+        mark_names: Optional[Sequence[str]] = None,
+        log_path: Optional[str] = None
+    ):
+        """Initialize the Rouse polymer.
+        """
+        super(Rouse, self).__init__(
+            name, r, t3=None, t2=None, states=states, mark_names=mark_names,
+            log_path=log_path
+        )
+        self.lp = lp
+
+    def compute_dE(self):
+        """Compute the change in configurational energy of a polymer.
+        """
+        pass
+
+    def construct_beads(self) -> Dict[int, beads.Bead]:
+        """Construct a list of beads forming the polymer.
+
+        Returns
+        -------
+        Dict[int, beads.Bead]
+            Dictionary of beads constructing the polymer chain. Keys represent
+            bead IDs, and values represent beads.Bead objects.
+        """
+        pass
+
+
+
+class SSWLC(Polymer):
     """The positions and chemical state of a discrete polymer.
 
     The polymer carries around a set of coordinates `r` of shape
@@ -346,16 +387,14 @@ class Chromatin(Polymer):
     Its material properties are completely defined by these positions, chemical
     states, and the length of polymer (in Kuhn lengths) simulated by each bead.
 
-    Since this codebase is primarily used to simulate DNA, information about
-    the chemical properties of each epigenetic mark are stored in `Epigenmark`
-    objects.
+    If this codebase is used to simulate DNA, information about the chemical
+    properties of each epigenetic mark are stored in `Epigenmark` objects. To
+    model arbitrary SSWLC's, the different types of `Mark` objects may be
+    specified to characterize bound components.
 
     TODO: allow differential discretization, and decay to constant
     discretization naturally.
     """
-
-    _arrays = 'r', 't3', 't2', 'states', 'bead_length'  # arrays saved to file
-    _3d_arrays = 'r', 't3', 't2'    # arrays w/ multi-indexed values (x, y, z)
 
     def __init__(
         self,
@@ -363,17 +402,14 @@ class Chromatin(Polymer):
         r: np.ndarray,
         *,
         bead_length: float,
+        lp: float,
         t3: Optional[np.ndarray] = None,
         t2: Optional[np.ndarray] = None,
         states: Optional[np.ndarray] = None,
         mark_names: Optional[Sequence[str]] = None,
         log_path: Optional[str] = None
     ):
-        """Construct a `Chromatin` fiber object as a subclass of `Polymer`.
-
-        Because the persistence length of chromatin is fixed at 53 nm, or
-        53 / 0.34 base pairs, it will be hard-coded into the `Chromatin` class
-        as the `lp` attribute.
+        """Construct a `SSWLC` polymer object as a subclass of `Polymer`.
 
         NOTE: For now, when loading polymer parameters for confirmational
         energy, the array-like of `bead_length` is ignored.
@@ -388,13 +424,14 @@ class Chromatin(Polymer):
             The amount of polymer path length between this bead and the next
             bead. For now, a constant value is assumed (the first value if an
             array is passed).
+        lp : float
+            Persistence length of the ssWLC
         t3 : (N, 3) array_like of float
             The tangent vector to each bead in global coordinates.
         t2 : (N, 3) array_like of float
             A material normal to each bead in global coordinates.
         states : (N, M) array_like of int
-            State of each of the M epigenetic marks being tracked for each
-            bead.
+            State of each of the M marks being tracked for each bead.
         mark_names : (M, ) str or Sequence[str]
             The name of each chemical modification tracked in `states`, for
             each of tracking which mark is which.
@@ -406,28 +443,28 @@ class Chromatin(Polymer):
             np.atleast_1d(bead_length), (len(r), 1)
         )
         self.bead_length = bead_length
-        super(Chromatin, self).__init__(
+        super(SSWLC, self).__init__(
             name, r, t3=t3, t2=t2, states=states, mark_names=mark_names,
             log_path=log_path
         )
         # Simulation units are in bsae pairs
-        self.lp = 53 / 0.34     # persistence length in base pairs
+        self.lp = lp
         self.delta, self.eps_bend, self.eps_par,\
             self.eps_perp, self.gamma, self.eta \
             = self._find_parameters(bead_length[0])
         self.check_attrs()
 
     def construct_beads(self) -> Dict[int, beads.Bead]:
-        """Construct Nucleosome objects forming beads of our Chromatin polymer.
+        """Construct `GhostBead` objects forming beads of the polymer.
 
         Returns
         -------
         Dict[int, beads.Nucleosome]
             Dictionary of Nucleosome objects forming our Chroamtin fiber. Keys
-            indicate nucleosome IDs, and values indicate Nucleosome objects.
+            indicate bead IDs, and values indicate `GhostBead` objects.
         """
         return {
-            i: beads.Nucleosome(
+            i: beads.GhostBead(
                 id=i,
                 r=self.r[i],
                 t3=self.t3[i],
@@ -599,30 +636,39 @@ class Chromatin(Polymer):
             bead pair.
         """
         delta_r_test = test_r_1 - r_0
-        delta_r_par_test = np.dot(delta_r_test, t3_0)
-        delta_r_perp_test = delta_r_test - delta_r_par_test * t3_0
+        delta_r_par_test = np.dot(delta_r_test, t3_0) * t3_0
+        delta_r_perp_test = delta_r_test - delta_r_par_test
+
         delta_r = r_1 - r_0
-        delta_r_par = np.dot(delta_r, t3_0)
-        delta_r_perp = delta_r - delta_r_par * t3_0
+        delta_r_par = np.dot(delta_r, t3_0) * t3_0
+        delta_r_perp = delta_r - delta_r_par
+
         bend_vec_test = test_t3_1 - t3_0 - self.eta * delta_r_perp_test
         bend_vec = t3_1 - t3_0 - self.eta * delta_r_perp
+
         delta_energy_poly = (
-                0.5 * self.eps_bend / self.delta
-                    * np.dot(bend_vec_test, bend_vec_test)
-                + 0.5 * self.eps_par / self.delta
-                    * (delta_r_par_test - self.delta * self.gamma) ** 2
-                + 0.5 * self.eps_perp / self.delta
-                    * np.dot(delta_r_perp_test, delta_r_perp_test)
-                )
-        delta_energy_poly -= (
-                0.5 * self.eps_bend / self.delta
-                    * np.dot(bend_vec, bend_vec)
-                + 0.5 * self.eps_par / self.delta
-                    * (delta_r_par - self.delta * self.gamma) ** 2
-                + 0.5 * self.eps_perp / self.delta
-                    * np.dot(delta_r_perp, delta_r_perp)
+            0.5 * self.eps_bend / self.delta * np.dot(
+                bend_vec_test, bend_vec_test
             )
-        return(delta_energy_poly)
+            + 0.5 * self.eps_par / self.delta * (np.dot(
+                delta_r_test, t3_0
+            ) - self.delta * self.gamma) ** 2
+            + 0.5 * self.eps_perp / self.delta * np.dot(
+                delta_r_perp_test, delta_r_perp_test
+            )
+        )
+        delta_energy_poly -= (
+            0.5 * self.eps_bend / self.delta * np.dot(
+                bend_vec, bend_vec
+            )
+            + 0.5 * self.eps_par / self.delta * (np.dot(
+                delta_r, t3_0
+            ) - self.delta * self.gamma) ** 2
+            + 0.5 * self.eps_perp / self.delta * np.dot(
+                delta_r_perp, delta_r_perp
+            )
+        )
+        return delta_energy_poly
 
     def __str__(self):
         """Return string representation of the Chromatin Polymer.
@@ -867,6 +913,83 @@ class Chromatin(Polymer):
         r = paths.gaussian_walk(num_beads, bead_length)
         t3, t2 = paths.estimate_tangents_from_coordinates(r)
         return cls(name, r, t3=t3, t2=t2, bead_length=bead_length, **kwargs)
+
+
+class Chromatin(SSWLC):
+    """Stretchable, sharable WLC model of chromatin.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        r: np.ndarray,
+        *,
+        bead_length: float,
+        t3: Optional[np.ndarray] = None,
+        t2: Optional[np.ndarray] = None,
+        states: Optional[np.ndarray] = None,
+        mark_names: Optional[Sequence[str]] = None,
+        log_path: Optional[str] = None
+    ):
+        """Construct a `Chromatin` fiber object as a subclass of `SSWLC`.
+
+        Because the persistence length of chromatin is fixed at 53 nm, or
+        53 / 0.34 base pairs, it will be hard-coded into the `Chromatin` class
+        as the `lp` attribute.
+
+        NOTE: For now, when loading polymer parameters for confirmational
+        energy, the array-like of `bead_length` is ignored.
+
+        Parameters
+        ----------
+        name : str
+            A name for convenient repr. Should be a valid filename.
+        r : (N, 3) array_like of float
+            The positions of each bead.
+        bead_length : float or (N,) array_like of float
+            The amount of polymer path length between this bead and the next
+            bead. For now, a constant value is assumed (the first value if an
+            array is passed).
+        t3 : (N, 3) array_like of float
+            The tangent vector to each bead in global coordinates.
+        t2 : (N, 3) array_like of float
+            A material normal to each bead in global coordinates.
+        states : (N, M) array_like of int
+            State of each of the M epigenetic marks being tracked for each
+            bead.
+        mark_names : (M, ) str or Sequence[str]
+            The name of each chemical modification tracked in `states`, for
+            each of tracking which mark is which.
+        log_path : Optional[str]
+            Path to the configuration tracker log. If None, no configuration
+            tracker will be initialized. (default = None)
+        """
+        lp = 53 / 0.34     # persistence length in base pairs
+        super(Chromatin, self).__init__(
+            name, r, bead_length, lp, t3=t3, t2=t2, states=states,
+            mark_names=mark_names, log_path=log_path
+        )
+
+    def construct_beads(self) -> Dict[int, beads.Bead]:
+        """Construct Nucleosome objects forming beads of our Chromatin polymer.
+
+        Returns
+        -------
+        Dict[int, beads.Nucleosome]
+            Dictionary of Nucleosome objects forming our Chroamtin fiber. Keys
+            indicate nucleosome IDs, and values indicate Nucleosome objects.
+        """
+        return {
+            i: beads.Nucleosome(
+                id=i,
+                r=self.r[i],
+                t3=self.t3[i],
+                t2=self.t2[i],
+                bead_length=self.bead_length[i],
+                states=self.states[i],
+                mark_names=self.mark_names
+            ) for i in range(len(self.r))
+        }
 
 
 def sin_func(x: float) -> float:

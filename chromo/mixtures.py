@@ -25,9 +25,9 @@ class Mixture:
             Collection of polymers forming the mixture.
         """
         self.polymers = polymers
-        self.num_nucleosomes = self.count_nucleosomes()
+        self.num_beads = self.count_beads()
 
-    def count_nucleosomes(self) -> int:
+    def count_beads(self) -> int:
         """Calculate the total number of nucleosomes in all polymers.
 
         Returns

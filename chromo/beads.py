@@ -22,8 +22,8 @@ class Bead(ABC):
         self,
         id: int,
         r: np.ndarray,
-        t3: np.ndarray,
-        t2: np.ndarray,
+        t3: Optional[np.ndarray] = None,
+        t2: Optional[np.ndarray] = None,
         states: Optional[np.ndarray] = None,
         mark_names: Optional[Sequence[str]] = None
     ):
@@ -38,8 +38,8 @@ class Bead(ABC):
             Bead identifier
         r : np.ndarray (3,)
             Coordinates of the nucleosome in form (x, y, z)
-        t3, t2 : np.ndarray (3,)
-            Tangent vectors defining orientation of nucleosomes
+        t3, t2 : Optional [np.ndarray] (3,)
+            Tangent vectors defining orientation of nucleosomes; default = None
         states : Optional[np.ndarray] (M, ) of int
             State of each of the M marks being tracked, default = None
         mark_names : Optional[Sequence[str]] (M, )
@@ -70,6 +70,57 @@ class Bead(ABC):
         """Print properties of the bead.
         """
         pass
+
+
+class GhostBead(Bead):
+    """Class representation of a "ghost bead" for which collisions are ignored.
+    """
+
+    def __init__(
+        self,
+        id: int,
+        r: np.ndarray,
+        t3: Optional[np.ndarray] = None,
+        t2: Optional[np.ndarray] = None,
+        states: Optional[np.ndarray] = None,
+        mark_names: Optional[Sequence[str]] = None
+    ):
+        """Initialize the non-interacting ghost bead object.
+
+        Parameters
+        ----------
+        id : int
+            Bead identifier
+        r : np.ndarray (3,)
+            Coordinates of the nucleosome in form (x, y, z)
+        t3, t2 : Optional [np.ndarray] (3,)
+            Tangent vectors defining orientation of nucleosomes; default = None
+        states : Optional[np.ndarray] (M, ) of int
+            State of each of the M marks being tracked, default = None
+        mark_names : Optional[Sequence[str]] (M, )
+            The name of each chemical modification tracked in `states`, for
+            each of tracking which mark is which. Mark names are how the
+            properties of the mark are obtained, default = None
+        """
+        super(DetailedNucleosome, self).__init__(
+            id, r, t3, t2, states, mark_names
+        )
+
+    def test_collision(self):
+        """Collisions are neglected for a ghost bead.
+        """
+        return False
+
+    def print_properties(self):
+        """Print properties of the ghost bead.
+        """
+        print("Ghost Bead ID: ", self.id)
+        print("Central Position: ")
+        print(self.r)
+        print("t3 Orientation: ")
+        print(self.t3)
+        print("t2 Orientation: ")
+        print(self.t2)
 
 
 class DetailedNucleosome(Bead):
