@@ -19,7 +19,8 @@ def combine_repeat(a, idx):
     #    counts = np.add.reduceat(b[:, 1:], idx)
     #    print(np.column_stack((grps, counts)))
 
-    b = idx[np.argsort(idx)]
+    # b = idx[np.argsort(idx)]
+    b = np.sort(idx, kind='mergesort')
     grps, idx = np.unique(b, return_index=True)
     counts = np.add.reduceat(a, idx)
     a_with_index = np.column_stack((grps, counts))

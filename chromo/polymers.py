@@ -212,6 +212,18 @@ class Polymer(ABC):
             return array
         return None
 
+    def update_prop(self, prop: str):
+        """Update bead property for each bead in polymer.
+
+        Parameters
+        ----------
+        prop : str
+            Name of the bead property being updated
+        """
+        if self.beads is not None:
+            for i in range(len(self.beads)):
+                self.beads[i].__dict__[prop] = self.__dict__[prop][i]
+
     def to_dataframe(self):
         """Write canonical CSV representation of the Polymer to file.
 
@@ -330,6 +342,27 @@ class Polymer(ABC):
         """Return number of beads in the polymer.
         """
         return self.r.shape[0]
+
+    def is_field_active(self) -> bool:
+        """Evaluate if the polymer is affected by a field.
+
+        The field will not be active if there are no marks defined or if there
+        are no marks bound.
+
+        Returns
+        -------
+        bool
+            Flag indicating whether the polymer is affected by the field (True)
+            or is agnostic to the field (False)
+        """
+        if self.states is None:
+            return False
+
+        marks_bound = np.sum(self.states)
+        if marks_bound == 0:
+            return False
+
+        return True
 
 
 class Rouse(Polymer):

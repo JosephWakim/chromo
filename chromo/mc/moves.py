@@ -7,6 +7,9 @@ functions applying transformations made by each move.
 # Built-in Modules
 from typing import Tuple, List, Callable, Optional
 
+# External Modules
+import numpy as np
+
 # Custom Modules
 import chromo.util.mc_stat as mc_stat
 from chromo.mc.move_funcs import (
@@ -168,6 +171,7 @@ class MCAdapter:
         """
         prop_names = _proposal_arg_names
         kwargs = {prop_names[i]: proposal[i] for i in range(len(prop_names)-2)}
+        continuous_inds = proposal[-3]
 
         # Remove inds and continuous_inds from proposal
         inds = kwargs.pop('inds')
@@ -179,9 +183,10 @@ class MCAdapter:
             if prop is not None:
                 actual_proposal.append(prop)
             else:
-                prop = []
-                for ind in inds:
-                    prop.append(poly.__dict__[name][ind])
+                if continuous_inds:
+                    prop = poly.__dict__[name][inds]
+                else:
+                    prop = np.array([poly.__dict__[name][ind] for ind in inds])
                 actual_proposal.append(prop)
 
         return actual_proposal
@@ -203,16 +208,18 @@ class MCAdapter:
         """
         inds = proposal[0]
         r, t3, t2, states = MCAdapter.replace_none(poly, *proposal)
-        for i in range(len(inds)):
-            poly.beads[inds[i]].r = r[i]
-            poly.beads[inds[i]].t3 = t3[i]
-            poly.beads[inds[i]].t2 = t2[i]
-            poly.beads[inds[i]].states = states[i]
-            poly.r[inds[i]] = r[i]
-            poly.t3[inds[i]] = t3[i]
-            poly.t2[inds[i]] = t2[i]
-            poly.states[inds[i]] = states[i]
-
+        continuous_inds = proposal[-3]
+        if continuous_inds:
+            poly.r[inds] = r
+            poly.t3[inds] = t3
+            poly.t2[inds] = t2
+            poly.states[inds] = states
+        else:
+            for i in range(len(inds)):
+                poly.r[inds[i]] = r[i]
+                poly.t3[inds[i]] = t3[i]
+                poly.t2[inds[i]] = t2[i]
+                poly.states[inds[i]] = states[i]
         self.num_success += 1
         self.acceptance_tracker.update_acceptance_rate(accept=True)
         self.acceptance_tracker.log_move(

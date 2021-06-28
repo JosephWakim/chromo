@@ -96,6 +96,8 @@ def mc_step(
     of the polymer. Instead, fill any `None` values with the old states of the
     polymer explicitly. This may be adjusted during future optimization.
 
+    TODO: Move `poly.is_field_active()` to the outer loop.
+
     Parameters
     ----------
     adaptible_move: MCAdapter
@@ -118,7 +120,7 @@ def mc_step(
 
     dE = 0
     dE += poly.compute_dE(*proposal[:-2])
-    if poly in field:
+    if poly in field and poly.is_field_active():
         dE += field.compute_dE(poly, *proposal[:-2])
 
     warnings.filterwarnings("error")
