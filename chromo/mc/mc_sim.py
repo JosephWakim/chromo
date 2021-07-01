@@ -3,11 +3,10 @@
 
 # Built-in Modules
 from time import process_time
-from typing import List, TypeVar
+from typing import List, TypeVar, Optional
 import warnings
 
 # External Modules
-import matplotlib.pyplot as plt
 import numpy as np
 
 # Custom Modules
@@ -24,7 +23,8 @@ def mc_sim(
     epigenmarks: List[Epigenmark],
     num_mc_steps: int,
     mc_move_controllers: List[Controller],
-    field: F
+    field: F,
+    random_seed: Optional[int] = 0
 ):
     """Perform Monte Carlo simulation.
 
@@ -34,46 +34,38 @@ def mc_sim(
 
     Parameters
     ----------
-    polymers: List[Polymer]
+    polymers : List[Polymer]
         Polymers affected by Monte Carlo simulation
-    epigenmarks: List[Epigenmark]
+    epigenmarks : List[Epigenmark]
         Specification of epigenetic marks on polymer
-    num_mc_steps: int
+    num_mc_steps : int
         Number of Monte Carlo steps to take between save points
-    mc_move_controllers: List[Controller]
+    mc_move_controllers : List[Controller]
         List of controllers for active MC moves in simulation
     field: F
         Field affecting polymer in Monte Carlo simulation
+    random_seed : Optional[int]
+        Randoms seed with which to initialize simulation (default = 0)
     """
-    move_runtime = []
+    np.random.seed(random_seed)
     t1_start = process_time()
+
     for i in range(num_mc_steps):
         if (i+1) % 500 == 0:
             print("MC Step " + str(i+1) + " of " + str(num_mc_steps))
-            t1_end = process_time()
             print(
                 "Time for previous 500 MC Steps (in seconds): ", round(
-                    t1_end-t1_start, 2
+                    process_time()-t1_start, 2
                 )
             )
             t1_start = process_time()
+
         for controller in mc_move_controllers:
             if controller.move.move_on:
                 for j in range(controller.move.num_per_cycle):
                     for poly in polymers:
-                        start = process_time()
                         mc_step(controller.move, poly, epigenmarks, field)
                         controller.update_amplitudes()
-                        end = process_time()
-                        move_runtime.append(end-start)
-
-    plt.figure(figsize=(4, 3))
-    plt.hist(move_runtime, bins=20)
-    plt.xlabel("runtime (sec)")
-    plt.ylabel("frequency")
-    plt.tight_layout()
-    plt.savefig("doc/source/Runtimes.png")
-    plt.close()
 
 
 def mc_step(

@@ -325,10 +325,8 @@ class Polymer(ABC):
         """
         if name is None:
             name = path.name
-        return cls.from_dataframe(
-            pd.read_csv(path, header=[0, 1], index_col=0),
-            name
-        )
+        df = pd.read_csv(path, header=[0, 1], index_col=0)
+        return cls.from_dataframe(df, name)
 
     def get_num_marks(self):
         """Return number of states tracked per bead.
@@ -427,6 +425,9 @@ class SSWLC(Polymer):
     TODO: allow differential discretization, and decay to constant
     discretization naturally.
     """
+
+    _arrays = 'r', 't3', 't2', 'states', 'bead_length'  # arrays saved to file
+    _3d_arrays = 'r', 't3', 't2'    # arrays w/ multi-indexed values (x, y, z)
 
     def __init__(
         self,

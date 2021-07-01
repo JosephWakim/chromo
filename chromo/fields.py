@@ -1,5 +1,4 @@
-"""
-Fields discretize space to efficiently track changes in Mark energy.
+"""Fields discretize space to efficiently track changes in Mark energy.
 
 Creates a field object that contains parameters for the field calculations
 and functions to generate the densities

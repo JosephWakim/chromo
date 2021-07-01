@@ -1,5 +1,4 @@
-"""
-Modifications to the polymer's chemical state that affect the energy.
+"""Modifications to the polymer's chemical state that affect the energy.
 
 Each simulation type will typically require a particular type of Mark, for
 which there will be a class defined here. In addition, for common, physically

@@ -41,9 +41,10 @@ marks = chromo.marks.make_mark_collection(
     epimarks
 )
 
+print("Constructing polymer...")
 # Specify polymers length
-num_beads = 400000
-bead_spacing = 3.9     # 1/40 persistence length
+num_beads = 1000
+bead_spacing = 7.8     # 1/20 persistence length
 p = Chromatin.arbitrary_path_in_x_y_z(
     'Chr-1',
     num_beads,
@@ -67,15 +68,23 @@ udf = UniformDensityField(
     n_bins_y, z_width, n_bins_z
 )
 
-# Evaluate performance of the simulator for all moves
+# Specify the bead selection and move amplitude bounds
 polymers = [p]
-num_snapshots = 200
-mc_steps_per_snapshot = 5000
-mc.polymer_in_field(
-    [p],
-    marks,
-    udf,
-    mc_steps_per_snapshot,
-    num_snapshots,
-    output_dir='output'
-)
+amp_bead_bounds, amp_move_bounds = mc.get_amplitude_bounds(polymers)
+
+if __name__ == "__main__":
+    """Run the simulation.
+    """
+    print("Starting new simulation...")
+    num_snapshots = 200
+    mc_steps_per_snapshot = 500
+    mc.polymer_in_field(
+        [p],
+        marks,
+        udf,
+        mc_steps_per_snapshot,
+        num_snapshots,
+        amp_bead_bounds,
+        amp_move_bounds,
+        output_dir='output'
+    )

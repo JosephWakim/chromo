@@ -5,10 +5,11 @@ functions applying transformations made by each move.
 """
 
 # Built-in Modules
-from typing import Tuple, List, Callable, Optional
+from typing import Tuple, List, Callable, Optional, Union, Dict
 
 # External Modules
 import numpy as np
+import pandas as pd
 
 # Custom Modules
 import chromo.util.mc_stat as mc_stat
@@ -21,6 +22,7 @@ from chromo.marks import Epigenmark
 
 MOVE_AMP = float
 BEAD_AMP = int
+NUMERIC = Union[int, float]
 
 _proposal_arg_names = [
     'inds', 'r', 't3', 't2', 'states', 'continuous_inds', 'bead_amp',
@@ -248,6 +250,49 @@ class MCAdapter:
             self.last_amp_bead,
             dE
         )
+
+
+class Bounds(object):
+    """Class representation of move or bead amplitude bounds.
+    """
+
+    def __init__(self, name: str, bounds: Dict[str, Tuple[NUMERIC, NUMERIC]]):
+        """Initialize the `Bounds` object.
+
+        Parameters
+        ----------
+        name : str
+            Name of the bounds
+        bounds : Dict[str, Tuple[NUMERIC, NUMERIC]]
+            Dictionary of bead selection or move amplitude bounds for each move
+            type, where keys are the names of the move types and values are
+            tuples in the form (lower bound, upper bound)
+        """
+        self.name = name
+        self.bounds = bounds
+
+    def to_dataframe(self):
+        """Express the Bounds using a dataframe.
+        """
+        move_names = self.bounds.keys()
+        bounds_arr = np.atleast_2d(
+            np.array(list(self.bounds.values())).flatten()
+        )
+        column_names = pd.MultiIndex.from_product(
+            [move_names, ('lower_bound', 'upper_bound')]
+        )
+        df = pd.DataFrame(bounds_arr, columns=column_names)
+        return df
+
+    def to_csv(self, path):
+        """Save Polymer object to CSV file as DataFrame.
+        """
+        return self.to_dataframe().to_csv(path)
+
+    def to_file(self, path):
+        """Synonym for `to_csv` to conform to `make_reproducible` spec.
+        """
+        return self.to_csv(path)
 
 
 move_list = [crank_shaft, end_pivot, slide, tangent_rotation]
