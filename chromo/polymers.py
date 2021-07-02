@@ -385,10 +385,141 @@ class Rouse(Polymer):
         )
         self.lp = lp
 
-    def compute_dE(self):
+    def compute_dE(
+        self, inds, r_trial, t3_trial, t2_trial, states_trial, continuous_inds
+    ):
         """Compute the change in configurational energy of a polymer.
         """
+        r_trial, t3_trial, t2_trial, states_trial = \
+            self.fill_in_None_Parameters(
+                inds, r_trial, t3_trial, t2_trial, states_trial
+            )
+        delta_energy_poly = 0
+        if continuous_inds:
+            ind0 = min(inds)
+            indf = max(inds) + 1
+            delta_energy_poly += self.continuous_dE_poly(
+                ind0, indf, r_trial, t3_trial, t2_trial
+            )
+        else:
+            for ind in inds:
+                ind0 = ind
+                indf = ind + 1
+                delta_energy_poly += self.continuous_dE_poly(
+                    ind0, indf, r_trial, t3_trial, t2_trial
+                )
+        # NOTE: REMOVE ME!
+        delta_energy_poly += self.confinement_potential(r_trail, r_points, ind0, indf) # Function of radius from center of confinement
+
+    def continuous_dE_poly(self, ind0, indf, r_trial, t3_trial, t2_trial):
+        """Compute change in polymer energy for a continuous bead region.
+
+        The internal configuration of a continuous segment selected for a move
+        is unaffected; therefore, change in polymer energy can be determined
+        from the beads at the ends of the selected segment.
+
+        If a bound of the selected segment exists at the end of the polymer,
+        then that bound does not contribute to a change in polymer energy.
+
+        For bounds of affected beads inside the polymer, begin by isolating
+        the position and orientation vectors of those bounds and their
+        neighbors, then calculate the change in polymer energy for the bead
+        pair.
+
+        Paramaters
+        ----------
+        ind0 : int
+            Index of the first bead in the continuous region
+        indf : int
+            One past the index of the last bead in the continuous region
+        r_trial : array_like (N, 3)
+            Array of coordinates for bead indices in range(ind0:indf)
+        t3_trial : array_like (N, 3)
+            Array of t3 tangents for bead indices in range(ind0:indf)
+        t2_trial : array_like (N, 3)
+            Array of t2 tangents for bead indices in range(ind0:indf)
+
+        Returns
+        -------
+        delta_energy_poly : float
+            Change in energy of polymer associated with trial move
+        """
+        delta_energy_poly = 0
+        if ind0 != 0:
+            r_0 = self.r[ind0 - 1, :]
+            r_1 = self.r[ind0, :]
+            test_r_1 = r_trial[0, :]
+            t3_0 = self.t3[ind0 - 1, :]
+            t3_1 = self.t3[ind0, :]
+            test_t3_1 = t3_trial[0, :]
+            t2_0 = self.t2[ind0 - 1, :]
+            t2_1 = self.t2[ind0, :]
+            test_t2_1 = t2_trial[0, :]
+            delta_energy_poly += self.bead_pair_dE_poly(
+                r_0, r_1, test_r_1, t3_0, t3_1, test_t3_1, t2_0, t2_1,
+                test_t2_1
+            )
+        if indf != self.num_beads:
+            r_0 = self.r[indf, :]
+            r_1 = self.r[indf - 1, :]
+            test_r_1 = r_trial[indf - ind0 - 1, :]
+            t3_0 = self.t3[indf, :]
+            t3_1 = self.t3[indf - 1, :]
+            test_t3_1 = t3_trial[indf - ind0 - 1, :]
+            t2_0 = self.t2[indf, :]
+            t2_1 = self.t2[indf - 1, :]
+            test_t2_1 = t2_trial[indf - ind0 - 1, :]
+            delta_energy_poly += self.bead_pair_dE_poly(
+                r_0, r_1, test_r_1, t3_0, t3_1, test_t3_1, t2_0, t2_1,
+                test_t2_1
+            )
+        return delta_energy_poly
+
+    def bead_pair_dE_poly(
+        self, r_0, r_1, test_r_1, t3_0, t3_1, test_t3_1, t2_0, t2_1,
+        test_t2_1
+    ):
+        e_spring = self.spring_energy(r_0, r_1, spring_constant)
+        e_spring_test = self.spring_energy(r_0, test_r_1, spring_constant)
+        return e_spring_test - e_spring
+
+    def spring_energy(self, r_0, r_1, potential):
         pass
+
+    def confinement_potential(self, r_trail, r_points, ind0, indf):
+        if ind0 == 0:
+            pass
+            # First bead follows a confinement potential for an endpoint
+
+    @classmethod
+    def gaussian_walk_polymer(
+        cls,
+        name: str,
+        num_beads: int,
+        bead_length: float,
+        **kwargs
+    ):
+        """Initialize a polymer to a Gaussian random walk.
+
+        Parameters
+        ----------
+        name : str
+            Name of the polymer
+        num_beads : int
+            Number of monomer units on the polymer
+        bead_length : float or (N,) array_like of float
+            The amount of polymer path length between this bead and the next
+            bead. For now, a constant value is assumed (the first value if an
+            array is passed).
+
+        Returns
+        -------
+        Polymer
+            Object representing a polymer initialized as Gaussian random walk
+        """
+        r = paths.gaussian_walk(num_beads, bead_length)
+        t3, t2 = paths.estimate_tangents_from_coordinates(r)
+        return cls(name, r, t3=t3, t2=t2, bead_length=bead_length, **kwargs)
 
     def construct_beads(self) -> Dict[int, beads.Bead]:
         """Construct a list of beads forming the polymer.
@@ -399,7 +530,17 @@ class Rouse(Polymer):
             Dictionary of beads constructing the polymer chain. Keys represent
             bead IDs, and values represent beads.Bead objects.
         """
-        pass
+        return {
+            i: beads.GhostBead(
+                id=i,
+                r=self.r[i],
+                t3=self.t3[i],
+                t2=self.t2[i],
+                bead_length=0,
+                states=self.states[i],
+                mark_names=self.mark_names
+            ) for i in range(len(self.r))
+        }
 
 
 class SSWLC(Polymer):
@@ -561,6 +702,7 @@ class SSWLC(Polymer):
                 delta_energy_poly += self.continuous_dE_poly(
                     ind0, indf, r_trial, t3_trial, t2_trial
                 )
+
         return delta_energy_poly
 
     def continuous_dE_poly(self, ind0, indf, r_trial, t3_trial, t2_trial):
