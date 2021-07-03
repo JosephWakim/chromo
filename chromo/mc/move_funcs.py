@@ -6,10 +6,11 @@ from typing import Tuple, List, Callable
 
 # External Modules
 import numpy as np
+from numba import njit
 
 # Custom Modules
 import chromo.util.bead_selection as beads
-import chromo.util.linalg as linalg
+import chromo.util.linalg as la
 from chromo.polymers import Polymer
 from chromo.marks import Epigenmark
 
@@ -17,7 +18,7 @@ from chromo.marks import Epigenmark
 MOVE_AMP = float
 BEAD_AMP = int
 
-_proposal_arg_names = [
+_proposal_arg_names: List[str] = [
     'inds', 'r', 't3', 't2', 'states', 'continuous_inds', 'bead_amp',
     'move_amp'
 ]
@@ -39,9 +40,7 @@ _move_arg_types = [
     BEAD_AMP
 ]
 
-_move_func_type = Callable[
-    [Polymer, MOVE_AMP, BEAD_AMP], _proposal_arg_types
-]
+_move_func_type = Callable[[Polymer, MOVE_AMP, BEAD_AMP], _proposal_arg_types]
 
 
 # Crank Shaft Move
@@ -81,26 +80,26 @@ def crank_shaft(
         indicator that a continuous segment of beads were affected,
         and the move and bead amplitudes
     """
-    rot_angle = amp_move * (np.random.rand() - 0.5)
-
-    num_beads = polymer.num_beads
-    bound_0 = np.random.randint(num_beads)
-    bound_1 = max(
-        int(beads.select_bead_from_point(amp_bead, num_beads, bound_0)), 1
-    )
+    rot_angle: float = amp_move * (np.random.rand() - 0.5)
+    num_beads: int = polymer.num_beads
+    bound_0: int = np.random.randint(num_beads)
+    bound_1: int = max(int(beads.from_point(amp_bead, num_beads, bound_0)), 1)
     ind0, indf = beads.check_bead_bounds(bound_0, bound_1, num_beads)
-    inds = np.arange(ind0, indf)
-    continuous_inds = True
+    inds: np.ndarray = np.arange(ind0, indf)
+    continuous_inds: bool = True
 
-    axis = get_crank_shaft_axis(polymer, ind0, indf)
-    r_points = np.ones((4, indf-ind0))
+    axis: np.ndarray = get_crank_shaft_axis(polymer, ind0, indf)
+    r_points: np.ndarray = np.ones((4, indf-ind0))
     r_points[0:3] = polymer.r[inds].T
-    t3_points = np.zeros((4, indf-ind0))
+    t3_points: np.ndarray = np.zeros((4, indf-ind0))
     t3_points[0:3] = polymer.t3[inds].T
-    t2_points = np.zeros((4, indf-ind0))
+    t2_points: np.ndarray = np.zeros((4, indf-ind0))
     t2_points[0:3] = polymer.t2[inds].T
+
+    point: np.ndarray = r_points[0:3, 0].flatten()
+    rot_mat: np.ndarray = la.arbitrary_axis_rotation(axis, point, rot_angle)
     r_trial, t3_trial, t2_trial = conduct_crank_shaft(
-        r_points, t3_points, t2_points, axis, rot_angle
+        r_points, t3_points, t2_points, rot_mat
     )
     r_trial = r_trial[0:3].T
     t3_trial = t3_trial[0:3].T
@@ -148,9 +147,8 @@ def conduct_crank_shaft(
     r_points: np.ndarray,
     t3_points: np.ndarray,
     t2_points: np.ndarray,
-    axis: np.ndarray,
-    rot_angle: float
-) -> Tuple[np.ndarray, np.ndarray]:
+    rot_mat: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Perform deterministic operation of crank_shaft move.
 
     Begin by determining the change in tangent vector orientation from the
@@ -164,11 +162,10 @@ def conduct_crank_shaft(
         Homogeneous coordinates for beads undergoing rotation.
     t3_points, t2_points : array_like (4, N)
         Homogeneous tangent vectors for beads undergoing rotation
-    axis : array_like (3,)
-        Rotation axis
-    rot_angle : float
-        Angle of rotation. Positive rotation is counterclockwise when
-        rotation axis is pointing directly out of the screen
+    rot_mat : array_like (4, 4)
+        Homogeneous rotation matrix for a specified angle of rotation, with
+        a positive rotation angle defined as counterclockwise with rotation
+        axis pointed directly out of screen
 
     Returns
     -------
@@ -177,13 +174,29 @@ def conduct_crank_shaft(
     t3_trial, t2_trial : array_like (4, N)
         Homogeneous tangent vectors for beads following rotation
     """
-    point = r_points[0:3, 0].flatten()
-    rot_matrix = linalg.arbitrary_axis_rotation(axis, point, rot_angle)
-    r_trial = rot_matrix @ r_points
-    t3_trial = rot_matrix @ t3_points
-    t2_trial = rot_matrix @ t2_points
-
+    r_trial = conduct_rotation(r_points, rot_mat)
+    t3_trial = conduct_rotation(t3_points, rot_mat)
+    t2_trial = conduct_rotation(t2_points, rot_mat)
     return r_trial, t3_trial, t2_trial
+
+
+@njit
+def conduct_rotation(matrix: np.ndarray, rot_mat: np.ndarray) -> np.ndarray:
+    """Rotate arbitrary homogeneous matrix using rotation matrix
+
+    Parameters
+    ----------
+    matrix : array_like (4, N)
+        Homogeneous matrix of points being rotated
+    rot_mat : array_like (4, 4)
+        Homogeneous rotation matrix
+
+    Returns
+    -------
+    array_like (4, N)
+        Array of homogeneous vectors after rotation by rotation matrix
+    """
+    return rot_mat @ matrix
 
 
 # End Pivot Move
@@ -226,21 +239,18 @@ def end_pivot(
 
     if rotate_LHS:
         ind0 = 0
-        indf = beads.select_bead_from_left(
-            amp_bead, num_beads
-        ) + 1
+        indf = beads.from_left(amp_bead, num_beads) + 1
         indf = min(indf, num_beads)
     else:
-        ind0 = beads.select_bead_from_right(
-            amp_bead, num_beads
-        )
+        ind0 = beads.from_right(amp_bead, num_beads)
         ind0 = min(ind0, num_beads-1)
         indf = num_beads
     inds = np.arange(ind0, indf)
     continuous_inds = True
 
-    axis = linalg.uniform_sample_unit_sphere()
+    axis = la.uniform_sample_unit_sphere()
     fulcrum = polymer.r[indf-1] if rotate_LHS else polymer.r[ind0]
+    rot_mat = la.arbitrary_axis_rotation(axis, fulcrum, rot_angle)
     r_points = np.ones((4, indf-ind0))
     r_points[0:3] = polymer.r[inds].T
     t3_points = np.zeros((4, indf-ind0))
@@ -249,7 +259,7 @@ def end_pivot(
     t2_points[0:3] = polymer.t2[inds].T
 
     r_trial, t3_trial, t2_trial = conduct_end_pivot(
-        r_points, t3_points, t2_points, axis, fulcrum, rot_angle
+        r_points, t3_points, t2_points, rot_mat
     )
     r_trial = r_trial[0:3].T
     t3_trial = t3_trial[0:3].T
@@ -261,13 +271,12 @@ def end_pivot(
     )
 
 
+@njit
 def conduct_end_pivot(
     r_points: np.ndarray,
     t3_points: np.ndarray,
     t2_points: np.ndarray,
-    axis: np.ndarray,
-    fulcrum: np.ndarray,
-    rot_angle: float
+    rot_mat: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Rotation of fixed sub set of beads.
@@ -283,13 +292,10 @@ def conduct_end_pivot(
         Homogeneous tangent vectors for beads undergoing rotation
     t2_points : array_like (4, N)
         Homogeneous tangent, orthogonal to t3 tangents, for rotating beads
-    axis : array_like (3,)
-        Rotation axis
-    fulcrum : array_like (3,)
-        Rotation fulcrum
-    rot_angle : float
-        Angle of rotation. Positive rotation is counterclockwise when
-        rotation axis is pointing directly out of the screen
+    rot_mat : array_like (4, 4)
+        Homogeneous rotation matrix for a specified angle of rotation, with
+        a positive rotation angle defined as counterclockwise with rotation
+        axis pointed directly out of screen
 
     Returns
     -------
@@ -300,12 +306,9 @@ def conduct_end_pivot(
     t2_trial : array_like (4, N)
         Homogeneous tangent vectors, orthogonal to t3_trial, following rotation
     """
-    rot_matrix = linalg.arbitrary_axis_rotation(
-        axis, fulcrum, rot_angle
-    )
-    r_trial = rot_matrix @ r_points
-    t3_trial = rot_matrix @ t3_points
-    t2_trial = rot_matrix @ t2_points
+    r_trial = rot_mat @ r_points
+    t3_trial = rot_mat @ t3_points
+    t2_trial = rot_mat @ t2_points
     return r_trial, t3_trial, t2_trial
 
 
@@ -349,13 +352,14 @@ def slide(
         indicator that a continuous segment of beads were affected
     """
     translation_amp = amp_move * (np.random.rand())
-    direction = linalg.uniform_sample_unit_sphere()
+    direction = la.uniform_sample_unit_sphere()
     slide_x, slide_y, slide_z = direction * translation_amp
+    translation_mat = la.generate_translation_mat(slide_x, slide_y, slide_z)
 
     num_beads = polymer.num_beads
     bound_0 = np.random.randint(num_beads)
     bound_1 = max(
-        int(beads.select_bead_from_point(amp_bead, num_beads, bound_0)), 1
+        int(beads.from_point(amp_bead, num_beads, bound_0)), 1
     )
     ind0, indf = beads.check_bead_bounds(bound_0, bound_1, num_beads)
     inds = np.arange(ind0, indf)
@@ -363,7 +367,7 @@ def slide(
 
     r_points = np.ones((4, indf-ind0))
     r_points[0:3] = polymer.r[inds].T
-    r_trial = conduct_slide(r_points, slide_x, slide_y, slide_z)
+    r_trial = conduct_slide(r_points, translation_mat)
     r_trial = r_trial[0:3].T
 
     return (
@@ -372,8 +376,9 @@ def slide(
     )
 
 
+@njit
 def conduct_slide(
-    r_points: np.ndarray, x: float, y: float, z: float
+    r_points: np.ndarray, translation_mat: np.ndarray
 ) -> np.ndarray:
     """
     Deterministic component of slide move.
@@ -385,12 +390,8 @@ def conduct_slide(
     ----------
     r_points : array_like (4, N)
         Homogeneous coordinates for beads undergoing slide move
-    x : float
-        Translation in the x-direction
-    y : float
-        Translation in the y-direction
-    z : float
-        Translation in the z-direction
+    translation_mat : array_like (4, 4)
+        Homogeneous translation matrix with which to translate r_points
 
     Return
     ------
@@ -398,9 +399,7 @@ def conduct_slide(
         Homogeneous coordinates of beads following slide move
 
     """
-    translation_mat = linalg.generate_translation_mat(x, y, z)
-    r_trial = translation_mat @ r_points
-    return r_trial
+    return translation_mat @ r_points
 
 
 # Tangent Rotation
@@ -433,129 +432,97 @@ def tangent_rotation(
     amp_bead : int
         Number of beads to randomly rotate
     """
+    rot_angle = amp_move * (np.random.rand() - 0.5)
     num_beads_to_move = max(int(np.random.uniform() * amp_bead), 1)
     num_beads = polymer.num_beads
-    rot_angle = amp_move * (np.random.rand() - 0.5)
-
-    inds = []
-    inds_t3_trial = []
-    inds_t2_trial = []
-    for i in range(num_beads_to_move):
-        ind, ind_t3_trial, ind_t2_trial = one_bead_tangent_rotation(
-            polymer, inds, rot_angle, num_beads
-        )
-        inds.append(ind)
-        inds_t3_trial.append(ind_t3_trial)
-        inds_t2_trial.append(ind_t2_trial)
-
-    inds = np.array(inds)
-    inds_t3_trial = np.atleast_2d(np.array(inds_t3_trial))
-    inds_t2_trial = np.atleast_2d(np.array(inds_t2_trial))
-    t3_trial = inds_t3_trial[:, 0:3]
-    t2_trial = inds_t2_trial[:, 0:3]
+    inds = get_inds(num_beads, num_beads_to_move)
+    t3_inds = np.ones((4, num_beads_to_move))
+    t3_inds[0:3, :] = polymer.t3[inds].T
+    t2_inds = np.ones((4, num_beads_to_move))
+    t2_inds[0:3, :] = polymer.t2[inds].T
+    t3_trial, t2_trial = rotate_select_beads(
+        t3_inds, t2_inds, rot_angle
+    )
+    t3_trial = t3_trial[0:3, :].T
+    t2_trial = t2_trial[0:3, :].T
     continuous_inds = False
-
-    inds, t3_trial, t2_trial = zip(*sorted(zip(inds, t3_trial, t2_trial)))
-    t3_trial = np.vstack(t3_trial)
-    t2_trial = np.vstack(t2_trial)
-
     return (
         inds, None, t3_trial, t2_trial, None, continuous_inds, len(inds),
         rot_angle
     )
 
 
-def one_bead_tangent_rotation(
-    polymer: Polymer,
-    adjusted_beads: List[int],
-    rot_angle: float,
-    num_beads: int
-) -> Tuple[int, np.ndarray, np.ndarray]:
-    """Random bead rotation for a single bead.
-
-    Stochastic component of random tangent vector rotations. Begins by
-    generating a random rotation angle based on the move amplitude. Select a
-    random bead which has not yet been rotation by the tangent rotation in this
-    MC step. Select an arbitrary axis about which to conduct the rotation. Then
-    generate and return trial orientations for the bead undergoing rotation.
-
-    Parameters
-    ----------
-    polymer : Polymer
-        Polymer object
-    adjusted_beads : List[int]
-        List of beads affected by the tangent rotation move
-    rot_angle : float
-        Random angle by which to rotate a randomly selected bead
-    num_beads : int
-        Number of beads in the polymer
-
-    Returns
-    -------
-    ind0 : int
-        Index of the rotated bead
-    t3_trial : np.ndarray
-        Trial t3 tangent of the rotated bead
-    t2_trial : np.ndarray
-        Trial t2 tangent of the rotated bead
-    """
-    t3_point = np.zeros(4)
-    t2_point = np.zeros(4)
-    redraw = True
-    while redraw:
-        ind0 = np.random.randint(num_beads)
-        if ind0 not in adjusted_beads:
-            redraw = False
-
-    t3_point[0:3] = polymer.t3[ind0]
-    t2_point[0:3] = polymer.t2[ind0]
-
-    axis = linalg.uniform_sample_unit_sphere()
-
-    t3_trial, t2_trial = conduct_tangent_rotation(
-        t3_point, t2_point, axis, rot_angle
-    )
-
-    return ind0, t3_trial, t2_trial
-
-
-def conduct_tangent_rotation(
-    t3_point: np.ndarray,
-    t2_point: np.ndarray,
-    axis: np.ndarray,
+def rotate_select_beads(
+    t3_points: np.ndarray,
+    t2_points: np.ndarray,
     rot_angle: float
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Deterministic component of tangent rotation move.
-
-    Rotate tangent vectors `t3_point` and `t2_point` about arbitrary axis for a
-    single bead on the polymer.
+    """Rotate the tangent vector of select beads about a random axis.
 
     Parameters
     ----------
-    t3_point : array_like (4,)
-        Homogeneous tangent vectors for bead undergoing rotation
-    t2_point : array_like (4,)
-        Homogeneous tangent, orthogonal to t3 tangent, for rotating bead
-    axis : array_like (3,)
-        Rotation axis
-    rot_angle : float
-        Angle of rotation. Positive rotation is counterclockwise when
-        rotation axis is pointing directly out of the screen
+    t3_points : array_like (4, N)
+        Homogeneous tangent vectors for beads undergoing rotation
+    t2_points : array_like (4, N)
+        Homogeneous tangent, orthogonal to t3 tangents, for rotating beads
+    rot_angle : array_like (4, N)
+        Angle for which to randomly rotate tangents
 
     Returns
     -------
-    t3_trial : array_like (4, N)
-        Homogeneous tangent vectors for beads following rotation
-    t2_trial : array_like (4, N)
-        Homogeneous tangent vectors, orthogonal to t3 tangents, following
-        rotation
+    array_like (4, N)
+        Homogeneous array of t3 tangent vectors after tangent rotation is
+        applied
+    array_like (4, N)
+        Homogeneous array of t2 tangent vectors after tangent rotation is
+        applied
     """
-    rot_matrix = linalg.arbitrary_axis_rotation(
-        axis, np.array([0, 0, 0]), rot_angle
-    )
-    t3_trial = rot_matrix @ t3_point
-    t2_trial = rot_matrix @ t2_point
+    origin = np.array([0, 0, 0])
+    num_points = t3_points.shape[1]
+    if t2_points.shape[1] != num_points:
+        raise ValueError(
+            "Dimensions of tangent arrays in `rotate_select_beads` is \
+            inconsistent."
+        )
+
+    t3_trial = np.empty(t3_points.shape)
+    t2_trial = np.empty(t2_points.shape)
+    for i in range(num_points):
+        axis = la.uniform_sample_unit_sphere()
+        rot_mat = la.arbitrary_axis_rotation(
+            axis, origin, rot_angle
+        )
+        t3_trial[:, i] = conduct_rotation(t3_points[:, i], rot_mat)
+        t2_trial[:, i] = conduct_rotation(t2_points[:, i], rot_mat)
+
     return t3_trial, t2_trial
+
+
+def get_inds(num_beads: int, num_inds: int) -> np.ndarray:
+    """Draw indices for the tangent rotation move.
+
+    Parameters
+    ----------
+    num_beads : int
+        Number of polymer beads from which to draw indices
+    num_inds : int
+        Number of indices to draw
+
+    Returns
+    -------
+    array_like (N, )
+        Array of bead indices for which to apply tangent rotation move
+    """
+    inds = np.ones(num_inds, dtype=int) * -1
+    for i in range(num_inds):
+        redraw: bool = True
+        while redraw:
+            ind0: int = np.random.randint(num_beads)
+            if ind0 not in inds:
+                inds[i] = ind0
+                redraw = False
+    inds = np.sort(inds)
+    return inds
 
 
 # Full Chain Rotation
@@ -591,8 +558,9 @@ def full_chain_rotation(
     inds = np.arange(0, num_beads, 1)
     continuous_inds = True
     rot_angle = amp_move * (np.random.rand() - 0.5)
-    axis = linalg.uniform_sample_unit_sphere()
+    axis = la.uniform_sample_unit_sphere()
     fulcrum = polymer.r[np.random.randint(0, num_beads)]
+    rot_mat = la.arbitrary_axis_rotation(axis, fulcrum, rot_angle)
 
     r = np.ones((4, num_beads))
     r[0:3, :] = polymer.r.T
@@ -601,9 +569,7 @@ def full_chain_rotation(
     t2 = np.ones((4, num_beads))
     t2[0:3, :] = polymer.t2.T
 
-    r_trial, t3_trial, t2_trial = conduct_end_pivot(
-        r, t3, t2, axis, fulcrum, rot_angle
-    )
+    r_trial, t3_trial, t2_trial = conduct_end_pivot(r, t3, t2, rot_mat)
     r_trial = r_trial[0:3].T
     t3_trial = t3_trial[0:3].T
     t2_trial = t2_trial[0:3].T
@@ -646,12 +612,13 @@ def full_chain_translation(
     inds = np.arange(0, num_beads, 1)
     continuous_inds = True
     translation_amp = amp_move * (np.random.rand())
-    direction = linalg.uniform_sample_unit_sphere()
+    direction = la.uniform_sample_unit_sphere()
     slide_x, slide_y, slide_z = direction * translation_amp
+    translation_mat = la.generate_translation_mat(slide_x, slide_y, slide_z)
 
     r = np.ones((4, num_beads))
     r[0:3, :] = polymer.r.T
-    r_trial = conduct_slide(r, slide_x, slide_y, slide_z)
+    r_trial = conduct_slide(r, translation_mat)
     r_trial = r_trial[0:3].T
 
     return (
@@ -710,7 +677,7 @@ def change_binding_state(
     num_beads = polymer.num_beads
     bound_0 = np.random.randint(num_beads)
     bound_1 = max(
-        int(beads.select_bead_from_point(amp_bead, num_beads, bound_0)), 1
+        int(beads.from_point(amp_bead, num_beads, bound_0)), 1
     )
     ind0, indf = beads.check_bead_bounds(bound_0, bound_1, num_beads)
     inds = np.arange(ind0, indf)

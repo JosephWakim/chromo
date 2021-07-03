@@ -7,8 +7,10 @@ from random import uniform
 
 # External Modules
 import numpy as np
+from numba import njit
 
 
+@njit
 def uniform_sample_unit_sphere() -> Tuple[float, float, float]:
     """Randomly sample a vector on the unit sphere.
 
@@ -26,6 +28,7 @@ def uniform_sample_unit_sphere() -> Tuple[float, float, float]:
     ])
 
 
+@njit
 def arbitrary_axis_rotation(axis, point, rot_angle):
     """
     Rotate about an axis defined by two points.
@@ -92,6 +95,7 @@ def arbitrary_axis_rotation(axis, point, rot_angle):
     return rot
 
 
+@njit
 def generate_translation_mat(delta_x, delta_y, delta_z):
     """
     Generate translation matrix.
@@ -123,6 +127,7 @@ def generate_translation_mat(delta_x, delta_y, delta_z):
     return translation_mat
 
 
+@njit
 def get_prism_verticies(
     num_sides: int,
     width: float,

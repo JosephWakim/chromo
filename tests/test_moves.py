@@ -5,7 +5,8 @@
 import numpy as np
 
 # Custom Modules
-import chromo.mc.moves as mv
+import chromo.mc.move_funcs as mv
+import chromo.util.linalg as la
 
 
 def test_determinitic_end_pivot():
@@ -77,14 +78,12 @@ def test_determinitic_end_pivot():
             [0, 1, 0, 0]
         ]
     ).T
-
+    rot_mat = la.arbitrary_axis_rotation(axis, r_points[0:3, 0], rot_angle)
     r, t3, t2 = mv.conduct_end_pivot(
         r_points,
         t3_points,
         t2_points,
-        axis,
-        r_points[0:3, 0],
-        rot_angle
+        rot_mat
     )
 
     assert np.all(np.isclose(r, r_expected))
@@ -119,11 +118,12 @@ def test_determinitic_slide_move():
             [4, 0, 3.5, 1]]
         ).T
 
+    translation_mat = la.generate_translation_mat(
+        translate_x, translate_y, translate_z
+    )
     r_observed = mv.conduct_slide(
         r_points,
-        translate_x,
-        translate_y,
-        translate_z
+        translation_mat
     )
 
     assert np.all(np.isclose(r_observed, r_expected))
@@ -137,16 +137,19 @@ def test_deterministic_tangent_rotation():
     """
     t3_point = np.array([0, 0, 1, 0])
     t2_point = np.array([0, 1, 0, 0])
+    origin = np.array([0, 0, 0])
 
     axis = np.array([1, 1, 1]) / np.sqrt(3)
     rot_angle = 2 * np.pi / 3
+    rot_mat = la.arbitrary_axis_rotation(
+            axis, origin, rot_angle
+        )
 
     t3_expected = np.array([1, 0, 0, 0])
     t2_expected = np.array([0, 0, 1, 0])
 
-    t3_observed, t2_observed = mv.conduct_tangent_rotation(
-        t3_point, t2_point, axis, rot_angle
-    )
+    t3_observed = mv.conduct_rotation(t3_point, rot_mat)
+    t2_observed = mv.conduct_rotation(t2_point, rot_mat)
 
     assert np.all(np.isclose(t3_observed, t3_expected))
     assert np.all(np.isclose(t2_observed, t2_expected))
@@ -203,6 +206,7 @@ def test_deterministic_crank_shaft_move():
     )
 
     t3_points = t3_poly[3:8, :].T
+    t2_placeholder = t3_points
 
     t3_expected = np.array(
         [
@@ -216,12 +220,14 @@ def test_deterministic_crank_shaft_move():
 
     axis = r_poly[2, 0:3] - r_poly[8, 0:3]
     axis = axis / np.linalg.norm(axis)
+    point: np.ndarray = r_points[0:3, 0].flatten()
+    rot_mat: np.ndarray = la.arbitrary_axis_rotation(axis, point, rot_angle)
 
     r, t3 = mv.conduct_crank_shaft(
         r_points,
         t3_points,
-        axis,
-        rot_angle
+        t2_placeholder,
+        rot_mat
     )
 
     assert np.all(np.isclose(r, r_expected))

@@ -4,6 +4,7 @@
 from typing import Callable, Tuple, Optional, List
 
 import numpy as np
+from numba import njit
 
 
 def coordinates_in_x_y(
@@ -251,6 +252,7 @@ def numerical_derivative(
     return (shape_func(point + step_size) - shape_func(point)) / step_size
 
 
+@njit
 def gaussian_walk(
     num_steps: int,
     step_size: float
@@ -277,6 +279,7 @@ def gaussian_walk(
     )
 
 
+@njit
 def estimate_tangents_from_coordinates(
     coordinates: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:

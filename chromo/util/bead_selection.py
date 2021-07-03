@@ -5,6 +5,7 @@ import random
 
 # External Modules
 import numpy as np
+from numba import njit
 
 
 def capped_exponential(window, cap=np.inf):
@@ -41,7 +42,7 @@ def capped_exponential(window, cap=np.inf):
     return r
 
 
-def select_bead_from_left(window, N_beads):
+def from_left(window, N_beads):
     """Randomly select index exponentially decaying from left.
 
     Parameters
@@ -65,7 +66,7 @@ def select_bead_from_left(window, N_beads):
     return capped_exponential(window, window)
 
 
-def select_bead_from_right(window, N_beads):
+def from_right(window, N_beads):
     """Randomly select index exponentially decaying from right.
 
     Parameters
@@ -83,11 +84,11 @@ def select_bead_from_right(window, N_beads):
         last position in the chain.
     """
 
-    dist_from_RHS = select_bead_from_left(window, N_beads)
+    dist_from_RHS = from_left(window, N_beads)
     return N_beads - dist_from_RHS
 
 
-def select_bead_from_point(window, N_beads, ind0):
+def from_point(window, N_beads, ind0):
     """Randomly select index w/ exponentially decaying probability from point.
 
     Parameters
@@ -118,14 +119,15 @@ def select_bead_from_point(window, N_beads, ind0):
     if side == 0:   # Select second bead on LHS
         window_side = max(min(window, ind0), 1)
         upper_bound = max(ind0, 1)
-        return select_bead_from_right(window_side, upper_bound)
+        return from_right(window_side, upper_bound)
 
     else:           # Select second bead on RHS
         window_side = max(min(window, N_beads - ind0), 1)
         upper_bound = max(N_beads - ind0, 1)
-        return select_bead_from_left(window_side, upper_bound) + ind0
+        return from_left(window_side, upper_bound) + ind0
 
 
+@njit
 def check_bead_bounds(bound_0, bound_1, num_beads):
     """Check the selected monomer bounds on the polymer.
 

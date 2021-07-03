@@ -9,15 +9,14 @@ sys.path.insert(1, parent_dir)
 import numpy as np
 import matplotlib.pyplot as plt
 
-from chromo.util.poly_stat import get_latest_simulation
 import chromo.util.poly_stat as ps
 import chromo.polymers as polymers
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 os.chdir(cwd + '/../../output')
 
-# sim = get_latest_simulation()
-sim = "sim_50"
+sim = ps.get_latest_simulation()
+# sim = "sim_50"
 num_equilibration_steps = 90
 
 print("Sim: " + sim)
@@ -36,8 +35,8 @@ output_files = [
 
 os.chdir(parent_dir)
 
-log_vals = np.arange(-2, 2, 0.05)
-bead_range = 10 ** log_vals # * 80
+log_vals = np.arange(-2, 3, 0.05)
+bead_range = 10 ** log_vals   # * 80
 bead_range = bead_range.astype(int)
 bead_range = np.array(
     [bead_range[i] for i in range(len(bead_range)) if bead_range[i] > 0]
@@ -67,7 +66,7 @@ for j, window_size in enumerate(bead_range):
             )
         average_squared_e2e[j] = np.average(r2)
 
-bead_range = bead_range / 80     # Convert x axis to number of kuhn lengths
+bead_range = bead_range / 40     # Convert x axis to number of kuhn lengths
 
 os.chdir(output_dir)
 with open("avg_squared_e2e.txt", "w") as output_file:

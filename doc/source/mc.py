@@ -43,7 +43,7 @@ marks = chromo.marks.make_mark_collection(
 
 print("Constructing polymer...")
 # Specify polymers length
-num_beads = 1000
+num_beads = 400000
 bead_spacing = 7.8     # 1/20 persistence length
 p = Chromatin.arbitrary_path_in_x_y_z(
     'Chr-1',
@@ -76,8 +76,8 @@ if __name__ == "__main__":
     """Run the simulation.
     """
     print("Starting new simulation...")
-    num_snapshots = 200
-    mc_steps_per_snapshot = 500
+    num_snapshots = 1
+    mc_steps_per_snapshot = 1000
     mc.polymer_in_field(
         [p],
         marks,
