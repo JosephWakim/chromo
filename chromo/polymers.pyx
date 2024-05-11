@@ -816,8 +816,11 @@ cdef class PolymerBase(TransformedObject):
         
         Notes
         -----
-        The field will not be active if there are no binders defined or if there
-        are no binders bound.
+        In the future, you can make the code more efficient by activating the
+        field only when necessary. The field is necessary only when the polymer
+        is bound by reader proteins OR is in a confinement OR has a volume
+        fraction limit OR has a non-specific chi interaction. For now, to be
+        safe, we will assume that the field always needs to be assessed.
 
         Returns
         -------
@@ -825,12 +828,6 @@ cdef class PolymerBase(TransformedObject):
             Flag indicating whether the polymer is affected by the field (True)
             or is agnostic to the field (False)
         """
-        cdef long binders_bound
-        if self.states.shape[1] == 0:
-            return 0
-        binders_bound = np.sum(self.states, dtype=long)
-        if binders_bound == 0:
-            return 0
         return 1
 
 
@@ -1063,10 +1060,9 @@ cdef class SSWLC(PolymerBase):
         delta_energy_poly = 0
 
         if move_name == "change_binding_state":
-            if self.is_field_active() == 1:
-                ind0 = inds[0]
-                indf = inds[n_inds-1] + 1
-                delta_energy_poly += self.binding_dE(ind0, indf, n_inds)
+            ind0 = inds[0]
+            indf = inds[n_inds-1] + 1
+            delta_energy_poly += self.binding_dE(ind0, indf, n_inds)
         
         elif (
             move_name == "slide" or move_name == "end_pivot" or
