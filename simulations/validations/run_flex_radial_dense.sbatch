@@ -8,6 +8,6 @@
 source ~/.bashrc
 conda activate chromo
 cd /scratch/groups/ajspakow/WS_crosstalk_2024/chromo/simulations/validations
-print("Starting simulation....")
+echo "Starting simulation...."
 python validate_radial_density_distribution.py
 echo 'Job complete!'
