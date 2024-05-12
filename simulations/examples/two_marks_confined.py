@@ -108,7 +108,7 @@ if "num_beads" in config:
 else:
     num_beads = len(chemical_mods)
 
-# Binding states
+# Binding states (all unbound)
 states = np.zeros(chemical_mods.shape, dtype=int)
 
 # Confinement
@@ -164,8 +164,8 @@ udf = UniformDensityField(
 
 # Specify simulation hyperparameters
 amp_bead_bounds, amp_move_bounds = mc.get_amplitude_bounds([p])
-num_snapshots = 100
-mc_steps_per_snapshot = 1000
+num_snapshots = 200
+mc_steps_per_snapshot = 6000
 
 # Create a list of mu schedules, which are defined in another file
 schedules = [func[0] for func in getmembers(ms, isfunction)]
