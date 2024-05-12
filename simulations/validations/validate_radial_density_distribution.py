@@ -1,4 +1,4 @@
-"""Validate End-to-End Distances.
+"""Validate radial density distribution of a flexible homopolymer.
 """
 
 import os
@@ -31,17 +31,23 @@ import chromo.util.poly_stat as ps
 null_binder = chromo.binders.get_by_name('null_reader')
 binders = chromo.binders.make_binder_collection([null_binder])
 
-# Instantiate Polymer
-num_beads = 500
-bead_spacing = np.ones(num_beads-1) * 25
-lp = 100
+# Specify Confinement
+confine_type = "Spherical"
+confine_length = 1000
 
-polymer = SSWLC.gaussian_walk_polymer(
+# Instantiate Polymer
+num_beads = 10000
+bead_spacing = 100
+lp = 0.5
+
+polymer = SSWLC.confined_gaussian_walk(
     'poly_1',
     num_beads,
     bead_spacing,
-    lp=lp,
-    binder_names=np.array(["null_reader"])
+    confine_type=confine_type,
+    confine_length=confine_length,
+    binder_names=np.array(['null_reader']),
+    lp=lp
 )
 
 # Instantiate Field
@@ -61,25 +67,30 @@ udf = UniformDensityField(
     y_width = y_width,
     ny = n_bins_y,
     z_width = z_width,
-    nz = n_bins_z
+    nz = n_bins_z,
+    confine_type = confine_type,
+    confine_length = confine_length,
+    chi=0,
+    vf_limit=1.0
 )
 
-# Specify simulation
+# Specify Simulation
 amp_bead_bounds, amp_move_bounds = mc.get_amplitude_bounds(
     polymers = [polymer]
 )
-out_dir = "output_semiflex"
-latest_sim = get_unique_subfolder_name(f"{out_dir}/sim_")
+output_dir = "output_flex_confined"
+latest_sim = get_unique_subfolder_name(f"{output_dir}/sim_")
 moves_to_use = ctrl.all_moves_except_binding_state(
     log_dir=latest_sim,
     bead_amp_bounds=amp_bead_bounds.bounds,
     move_amp_bounds=amp_move_bounds.bounds,
     controller=ctrl.SimpleControl
 )
-num_snapshots = 200
-mc_steps_per_snapshot = 10000
 
-# Run simulation
+num_snapshots = 200
+mc_steps_per_snapshot = 4000
+
+# Run Simulation
 mc.polymer_in_field(
     polymers = [polymer],
     binders = binders,
@@ -88,12 +99,12 @@ mc.polymer_in_field(
     num_saves = num_snapshots,
     bead_amp_bounds = amp_bead_bounds,
     move_amp_bounds = amp_move_bounds,
-    output_dir = out_dir,
+    output_dir = output_dir,
     mc_move_controllers = moves_to_use
 )
 
-# Evaluate Simulation
-sim_dir = os.path.join(parent_dir, out_dir, latest_sim)
+# Evaluate Radial Density Distribution
+sim_dir = os.path.join(parent_dir, output_dir, latest_sim)
 
 # List (sorted) snapshots
 snaps = os.listdir(sim_dir)
@@ -101,45 +112,52 @@ snaps = [snap for snap in snaps if snap.startswith("poly_") and snap.endswith(".
 snap_inds = [int(snap.split(".")[0].split("-")[-1])for snap in snaps]
 snaps = [snap for _, snap in sorted(zip(snap_inds, snaps))]
 snap_inds = np.sort(snap_inds)
-print(f"Snapshots: {snaps}")
 
 # Identify equilibrated snapshots
-n_equilibrate = 150
+n_equilibrate = 175
 snaps = np.array(snaps)
 equilibrated_snaps = snaps[snap_inds >= n_equilibrate]
+step_size = 50
 
-# Compute average squared end-to-end distances
-n_beads = np.arange(1, 100)
-seg_lengths = n_beads * bead_spacing[0] / (2 * lp)
-e2e = []
+# Compute Radial Densities
+counts_all = []
 for snap in equilibrated_snaps:
-    e2e_snap = []
     snap_path = os.path.join(sim_dir, snap)
     r = pd.read_csv(snap_path, sep=",", header=[0, 1], index_col=0)["r"].to_numpy()
-    for n_beads_ in n_beads:
-        r1 = r[n_beads_:]
-        r2 = r[:-n_beads_]
-        e2e_snap.append(
-            np.average(
-                np.linalg.norm(r1 - r2, axis=1) ** 2
-            ) / ((2 * lp)**2)
-        )
-    e2e.append(e2e_snap)
-e2e = np.array(e2e)
-e2e = np.average(e2e, axis=0)
-assert len(e2e) == len(seg_lengths), "End-to-end distances do not align with segment lengths."
+    radial_dists = np.linalg.norm(r, axis=1)
+    bins = np.arange(step_size, confine_length, step_size)
+    counts, bin_edges = np.histogram(radial_dists, bins=bins)
+    counts = counts.astype(float)
+    counts_all.append(counts)
 
-# Compute theoretical end-to-end distances
-r2_theory = seg_lengths - 1/2 + np.exp(-2 * seg_lengths)/2
+counts_all = np.array(counts_all)
+counts_avg = np.sum(counts_all, axis=0)
 
-# Plot mean squared end-to-end distances
+# Correct densities based on volumes of spherical shells
+for i in range(len(bin_edges)-1):
+    volume = 4/3 * np.pi * ((bin_edges[i+1]/1E3)**3 - (bin_edges[i]/1E3)**3)
+    counts_avg[i] /= volume
+counts_avg /= np.sum(counts_avg)
+
+# Get theoretical radial densities
+a = confine_length
+b = lp
+N = len(r)
+r_theory = np.arange(step_size, confine_length, 1)
+n_max = 1000
+rho = np.zeros(len(r_theory))
+for n in range(2, n_max + 1):
+    rho += (-1)**(n+1) / (n * np.pi) * np.sin(np.pi * r_theory / a) * np.sin(n * np.pi * r_theory / a) / (r_theory**2 * b**2 * (n**2 - 1))
+rho += N / np.pi * np.sin(np.pi * r_theory / a)**2 / r_theory**2
+
+normalize = np.sum(rho)
+rho_theory = rho / normalize * step_size
+
 plt.figure(figsize=(4,3), dpi=300)
-plt.scatter(seg_lengths, e2e, color="black", label="simulation")
-plt.xlabel(r"$L/(2l_p)$")
-plt.ylabel(r"$\langle R^2 \rangle /(2l_p)^2$")
-plt.plot(seg_lengths, r2_theory, color="red", label="theory")
+plt.hist(bin_edges[:-1], bin_edges, weights=counts_avg, alpha=1, color="gray", label="simulation")
+plt.plot(r_theory, rho_theory, color="red", label="theory")
+plt.xlabel("Radial Distance (nm)")
+plt.ylabel(r"Probability")
 plt.legend()
-plt.xscale("log")
-plt.yscale("log")
 plt.tight_layout()
-plt.savefig(os.path.join(sim_dir, "e2e_distances.png"), dpi=600)
+plt.savefig(os.path.join(sim_dir, "radial_density.png"), dpi=600)
