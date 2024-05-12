@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=search_1
+#SBATCH --job-name=flex
 #SBATCH --time=11:59:59
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
