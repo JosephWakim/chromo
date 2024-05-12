@@ -23,12 +23,12 @@ from chromo.polymers cimport PolymerBase, DetailedChromatinWithSterics
 from chromo.mc.moves import MCAdapter
 from chromo.mc.moves cimport MCAdapter
 from chromo.mc.mc_controller import Controller
-from chromo.fields cimport FieldBase as FB
+from chromo.fields cimport UniformDensityField as Udf
 
 
 cpdef void mc_sim(
     list polymers, readerproteins, long num_mc_steps,
-    list mc_move_controllers, FB field, double mu_adjust_factor,
+    list mc_move_controllers, Udf field, double mu_adjust_factor,
     long random_seed
 ):
     """Perform Monte Carlo simulation.
@@ -76,7 +76,6 @@ cpdef void mc_sim(
     cdef poly
 
     np.random.seed(random_seed)
-    srand(random_seed)
     n_polymers = len(polymers)
     if field.confine_type == "":
         active_fields = [poly.is_field_active() for poly in polymers]
@@ -88,6 +87,9 @@ cpdef void mc_sim(
             if controller.move.move_on == 1:
                 for j in range(controller.move.num_per_cycle):
                     for i in range(len(polymers)):
+                        # Change the seed for CYTHON
+                        inner_seed = np.random.randint(0, 1E5)
+                        srand(inner_seed)
                         poly = polymers[i]
                         # Update distances depending on the class of the polymer
                         update_pairwise_distances = \
@@ -103,7 +105,7 @@ cpdef void mc_sim(
 
 cpdef void mc_step(
     MCAdapter adaptible_move, PolymerBase poly, readerproteins,
-    FB field, bint active_field, bint update_distances
+    Udf field, bint active_field, bint update_distances
 ):
     """Compute energy change and determine move acceptance.
 

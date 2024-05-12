@@ -837,45 +837,6 @@ cdef long get_new_state(
     long
         Number of tails that are bound after the move
     """
-    cdef long new_binding_state, i
-
-    for i in range(num_tails):
-        if i < state:
-            binder.binding_seq[i] = 1
-        else:
-            binder.binding_seq[i] = 0
-
-    fisher_yates_shuffle(binder.binding_seq, num_tails)
-
-    for i in range(num_tails_flipped):
-        binder.binding_seq[i] = (binder.binding_seq[i] + 1) % 2
-
-    new_binding_state = 0
-    for i in range(num_tails):
-        new_binding_state += binder.binding_seq[i]
-
+    cdef long new_binding_state
+    new_binding_state = np.random.randint(0, num_tails + 1)
     return new_binding_state
-
-
-cdef void fisher_yates_shuffle(long[:]& arr, long len_arr):
-    """In-place Fisher-Yates shuffle algorithm.
-
-    Parameters
-    ----------
-    arr : array_like (M, ) of long by reference
-        Array to be shuffled in-place
-    len_arr : long
-        Length of the array to be shuffled
-    """
-    cdef long i, ind0, ind1, num_remaining, temp, len_arr_minus_1
-
-    len_arr_minus_1 = len_arr - 1
-    num_remaining = len_arr
-
-    for i in range(len_arr_minus_1):
-        ind0 = rand() % num_remaining
-        ind1 = num_remaining - 1
-        temp = arr[ind0]
-        arr[ind0] = arr[ind1]
-        arr[ind1] = temp
-        num_remaining -= 1

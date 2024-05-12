@@ -1489,7 +1489,6 @@ cdef class SSWLC(PolymerBase):
             Nm = mod_states[b]
             # Number of unmodified tails
             Nu = Nn - Nm
-
             # Single-site Helmholtz free energy (trial configuration)
             i = np.arange(states_trial_ind[b] + 1)
             dE += -np.log(np.sum(
@@ -1503,7 +1502,6 @@ cdef class SSWLC(PolymerBase):
                     )
                 ))
             ))
-
             # Single-site Helmholtz free energy (current configuration)
             i = np.arange(states_ind[b] + 1)
             dE -= -np.log(np.sum(
@@ -1517,19 +1515,13 @@ cdef class SSWLC(PolymerBase):
                     )
                 ))
             ))
-
-            # Chemical potentials
-            dE += -states_trial_ind[b] * (min(
-                self.beads[ind].binders[b].chemical_potential,
-                self.beads[ind].binders[b].chemical_potential *
+            # Chemical potential
+            dE -= states_trial_ind[b] * \
+                  self.beads[ind].binders[b].chemical_potential * \
+                  self.mu_adjust_factor
+            dE += states_ind[b] * \
+                self.beads[ind].binders[b].chemical_potential * \
                 self.mu_adjust_factor
-            ))
-            dE -= -states_ind[b] * (min(
-                self.beads[ind].binders[b].chemical_potential,
-                self.beads[ind].binders[b].chemical_potential *
-                self.mu_adjust_factor
-            ))
-
         return dE
 
     def __str__(self):
