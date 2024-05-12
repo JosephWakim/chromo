@@ -37,7 +37,7 @@ confine_length = 1000
 
 # Instantiate Polymer
 num_beads = 10000
-bead_spacing = 100
+bead_spacing = np.ones(num_beads - 1) * 100
 lp = 0.5
 
 polymer = SSWLC.confined_gaussian_walk(
