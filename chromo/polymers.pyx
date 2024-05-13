@@ -1516,12 +1516,25 @@ cdef class SSWLC(PolymerBase):
                 ))
             ))
             # Chemical potential
-            dE -= states_trial_ind[b] * \
-                  self.beads[ind].binders[b].chemical_potential * \
-                  self.mu_adjust_factor
-            dE += states_ind[b] * \
-                self.beads[ind].binders[b].chemical_potential * \
-                self.mu_adjust_factor
+            # Note: Simulated annealing affects positive and negative chemical
+            # potentials in different ways
+            # TODO: Accommodate different types of simulated annealing schedules
+            if self.beads[ind].binders[b].chemical_potential > 0:
+                dE -= states_trial_ind[b] * (
+                    self.beads[ind].binders[b].chemical_potential *
+                    (-self.mu_adjust_factor + 2)
+                )
+                dE += states_ind[b] * (
+                    self.beads[ind].binders[b].chemical_potential *
+                    (-self.mu_adjust_factor + 2)
+                )
+            else:
+                dE -= states_trial_ind[b] * \
+                    self.beads[ind].binders[b].chemical_potential * \
+                    self.mu_adjust_factor
+                dE += states_ind[b] * \
+                    self.beads[ind].binders[b].chemical_potential * \
+                    self.mu_adjust_factor
         return dE
 
     def __str__(self):
