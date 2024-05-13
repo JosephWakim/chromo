@@ -762,7 +762,7 @@ cpdef long[:] change_binding_state(
     # Stochastic Move Selection
     binder_ind = rand() % polymer.num_binders
     n_tails = polymer.beads[0].binders[binder_ind].sites_per_bead
-    b_0 = np.random.randint(polymer.num_beads)
+    b_0 = rand() % polymer.num_beads
     b_1 = beads.from_point(amp_bead, polymer.num_beads, b_0)
     ind0, indf = beads.check_bead_bounds(b_0, b_1, polymer.num_beads)
     inds = np.arange(ind0, indf)
