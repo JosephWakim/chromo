@@ -8,11 +8,7 @@ pyximport.install()
 
 # Built-in Modules
 from typing import List, Optional
-from libc.stdlib cimport rand, RAND_MAX, srand
-#from libc.math cimport exp
-#from time import process_time
-#import warnings
-#import sys
+from libc.stdlib cimport rand, RAND_MAX
 
 # External Modules
 import numpy as np
@@ -51,6 +47,12 @@ cpdef void mc_sim(
             )
         )
         t1_start = process_time()
+        
+    TODO: To make the simulator more reproducible, consider setting a random
+    seed for the CYTHON code. Note, this uses srand (in libc.stdlib). However,
+    be very careful not to accidentally set the random seed in the wrong place
+    so as not to disrupt the randomness of the simulation. This is a potential
+    source of error.
 
     Parameters
     ----------
@@ -87,9 +89,6 @@ cpdef void mc_sim(
             if controller.move.move_on == 1:
                 for j in range(controller.move.num_per_cycle):
                     for i in range(len(polymers)):
-                        # Change the seed for CYTHON
-                        inner_seed = np.random.randint(0, 1E5)
-                        srand(inner_seed)
                         poly = polymers[i]
                         # Update distances depending on the class of the polymer
                         update_pairwise_distances = \
@@ -144,13 +143,11 @@ cpdef void mc_step(
     if poly in field and active_field:
         if adaptible_move.name != "tangent_rotation":
             check_field = 1
-
     packet_size = 20
     inds = adaptible_move.propose(poly)
     n_inds = len(inds)
     if n_inds == 0:
         return
-
     dE = 0
     dE += poly.compute_dE(adaptible_move.name, inds, n_inds)
     if check_field == 1:
@@ -177,7 +174,6 @@ cpdef void mc_step(
         )
         if check_field == 1:
             field.update_affected_densities()
-
     else:
         adaptible_move.reject(
             poly, dE, inds, n_inds, log_move=False, log_update=False,

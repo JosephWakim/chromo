@@ -756,33 +756,28 @@ cpdef long[:] change_binding_state(
         Indices of M beads affected by the MC move
     """
     # Type Declarations
-    cdef long binder_ind, n_tails, n_flip, b_0, b_1, ind0, indf, n_inds
-    cdef long[:] inds, possible_flips
+    cdef long binder_ind, n_tails, b_0, b_1, ind0, indf, n_inds
+    cdef long[:] inds
 
     # Stochastic Move Selection
     binder_ind = rand() % polymer.num_binders
     n_tails = polymer.beads[0].binders[binder_ind].sites_per_bead
-    b_0 = rand() % polymer.num_beads
+    b_0 = np.random.randint(polymer.num_beads)
     b_1 = beads.from_point(amp_bead, polymer.num_beads, b_0)
     ind0, indf = beads.check_bead_bounds(b_0, b_1, polymer.num_beads)
     inds = np.arange(ind0, indf)
     n_inds = indf - ind0
-    possible_flips = np.arange(1, n_tails + 1, 1)
-    num_prob_bounds = n_tails - 1
-    n_flip = rand() % (n_tails + 1)
     polymer.last_amp_bead = n_inds
-    polymer.last_amp_move = <double> n_flip
+    polymer.last_amp_move = <double> n_tails
 
     # Perform Binding Move
-    conduct_change_binding_states(
-        polymer, ind0, indf, n_inds, inds, binder_ind, n_tails, n_flip
-    )
+    conduct_change_binding_states(polymer, n_inds, inds, binder_ind, n_tails)
     return inds
 
 
 cdef void conduct_change_binding_states(
-    poly.PolymerBase polymer, long ind0, long indf, long n_inds, long[:] inds,
-    long binder_ind, long num_tails, long num_tails_flipped
+    poly.PolymerBase polymer, long n_inds, long[:] inds, long binder_ind,
+    long num_tails
 ):
     """Get new binding states for the beads affected by the binding state move.
 
@@ -790,8 +785,6 @@ cdef void conduct_change_binding_states(
     ----------
     polymer : poly.PolymerBase
         Polymer object on which the binding state move is applied
-    ind0, indf : long
-        First bead index and one past the last bead index affected by move
     n_inds : long
         Number of beads affected by binding state move (equal to `indf`-`ind0`)
     inds : array_like (M,)
@@ -802,35 +795,20 @@ cdef void conduct_change_binding_states(
         represents the column of the states array affected by the move
     num_tails : long
         Number of binding sites of the bead for the particular binder being
-        flipped by the move.
-    num_tails_flipped : long
-        Number of binding sites on the bead to flip
+        flipped by the move
     """
     cdef long i
-
     for i in range(n_inds):
-        polymer.states_trial[inds[i], binder_ind] = get_new_state(
-            polymer.beads[0].binders[binder_ind],
-            polymer.states[inds[i], binder_ind],
-            num_tails, num_tails_flipped
-        )
+        polymer.states_trial[inds[i], binder_ind] = get_new_state(num_tails)
 
 
-cdef long get_new_state(
-    Binder binder, long state, long num_tails, long num_tails_flipped
-):
+cdef long get_new_state(long num_tails):
     """Get a next binding state of a bead.
 
     Parameters
     ----------
-    binder : Binder
-        The Binder object whose binding state is being changed
-    state : long
-        Current binding state of the bead – how many bead tails are bound
     num_tails : long
         Number of tails for the particular binder which may be bound
-    num_tails_flipped : long
-        Number of tails for the particular binder which are swapped
 
     Returns
     -------
