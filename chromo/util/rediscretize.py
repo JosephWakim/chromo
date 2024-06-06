@@ -446,7 +446,9 @@ def get_cg_chromatin(
         chem_mods_cg = get_majority_state_in_interval(
             polymer.chemical_mods, intervals
         )
-    bead_length_cg = polymer.bead_length
+    # NOTE: Currently, the code accommodates a single linker length
+    # TODO: Adjust the line below to account for variable linker lengths
+    bead_length_cg = np.ones(len(r_cg)-1) * polymer.bead_length[0]
     bead_rad_cg = polymer.bead_rad
 
     # Scale the radial position of the beads inwards based on `cg_factor`
