@@ -1101,7 +1101,8 @@ def refine_chromatin(
         )
         for _ in range(binding_equilibration):
             mc_step(
-                binding_move[0].move, polymer, udf.binders, udf, active_field=1
+                binding_move[0].move, polymer, udf.binders, udf, active_field=1,
+                update_distances=0
             )
     return polymer, udf
 
