@@ -181,6 +181,7 @@ else:
 
 # Refine the polymer
 n_bind_eq = 1000000
+bead_spacing = 16.5  # Currently, only uniform linker lengths are supported
 p_refine, udf_refine = rd.refine_chromatin(
     polymer_cg=p_cg,
     num_beads_refined=num_beads,
@@ -195,6 +196,10 @@ p_refine, udf_refine = rd.refine_chromatin(
 # Specify move and bead amplitudes
 amp_bead_bounds, amp_move_bounds = mc.get_amplitude_bounds([p_refine])
 
+# Specify duration of simulation
+num_snapshots = 200
+mc_steps_per_snapshot = 5000
+
 # Run the refined simulation
 polymers_refined = mc.polymer_in_field(
     [p_refine],
@@ -207,6 +212,6 @@ polymers_refined = mc.polymer_in_field(
     output_dir=output_dir,
     random_seed=random_seed,
     path_to_run_script=path_to_run_script,
-    path_to_chem_mods=chem_mod_paths_abs,
+    path_to_chem_mods=chem_mods_path,
     run_command=run_command
 )
