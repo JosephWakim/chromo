@@ -1047,7 +1047,8 @@ def refine_chromatin(
     """
     num_beads_cg = len(polymer_cg.r)
     scaling = (num_beads_refined / num_beads_cg)**(1/3)
-    bead_spacing_scaled_inward = bead_spacing / scaling
+    bead_spacing_scaled_inward = \
+        np.ones(num_beads_cg-1) * bead_spacing / scaling
     r_refine = get_refined_path(
         polymer_cg.r, num_beads_refined, bead_spacing_scaled_inward
     )
