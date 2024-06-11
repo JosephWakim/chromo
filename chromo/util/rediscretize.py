@@ -789,11 +789,13 @@ def get_refined_path(
         # First and last segments are free ends
         if ind == 0:
             seg_path = np.flip(gaussian_walk_from_point(
-                bounds[1], num_steps[ind], bead_spacing
+                bounds[1], num_steps[ind],
+                np.array([bead_spacing] * num_steps[ind])
             ), axis=0)[:num_steps[ind]]
         elif ind == num_beads_cg:
             seg_path = gaussian_walk_from_point(
-                bounds[0], num_steps[ind], bead_spacing
+                bounds[0], num_steps[ind],
+                np.array([bead_spacing] * num_steps[ind])
             )
         # Intermediate segments have constrained points
         else:
@@ -1050,7 +1052,7 @@ def refine_chromatin(
     bead_spacing_scaled_inward = \
         np.ones(num_beads_cg-1) * bead_spacing / scaling
     r_refine = get_refined_path(
-        polymer_cg.r, num_beads_refined, bead_spacing_scaled_inward
+        polymer_cg.r, num_beads_refined, bead_spacing_scaled_inward[0]
     )
     t3_refine, t2_refine = get_refined_orientations(
         polymer_cg.t3, num_beads_refined
