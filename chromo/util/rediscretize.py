@@ -1061,10 +1061,14 @@ def refine_chromatin(
     # Scale the radial position of the beads outward based on `cg_factor`
     r_refine *= scaling
 
+    # NOTE: Currently, the code accommodates a single linker length
+    # TODO: Adjust the line below to account for variable linker lengths
+    bead_spacing_refine = np.ones(len(r_refine)-1) * bead_spacing
+
     polymer = poly.Chromatin(
         name=name_refine,
         r=r_refine,
-        bead_length=bead_spacing,
+        bead_length=bead_spacing_refine,
         bead_rad=polymer_cg.bead_rad,
         t3=t3_refine,
         t2=t2_refine,
