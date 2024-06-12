@@ -568,7 +568,7 @@ def get_refined_intervals(
     num_steps = {0: seg_half_1}
     for i in range(1, num_beads_cg-1):
         num_steps[i] = seg_size
-    num_steps[num_beads_cg-1] = seg_half_2
+    num_steps[num_beads_cg-1] = seg_half_2 - 1
 
     start_end = {0: (np.asarray([np.nan, np.nan, np.nan]), cg_r[0, :])}
     for i in range(1, num_beads_cg):
