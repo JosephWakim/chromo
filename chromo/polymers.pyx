@@ -1351,7 +1351,8 @@ cdef class SSWLC(PolymerBase):
         Notes
         -----
         This method loops over each bond in the polymer and calculates the 
-        energy change of that bond.
+        energy change of that bond. Notice, the polymer energy is computed
+        by representing the bonds in both the forward and reverse directions.
 
         Returns
         -------
@@ -1364,13 +1365,14 @@ cdef class SSWLC(PolymerBase):
         cdef double[:] r_0, r_1, t3_0, t3_1
 
         E = 0
+
+        # Compute energy in the forward direction
         for i in range(1, self.num_beads):
             i_m1 = i - 1
             r_0 = self.r[i_m1, :]
             r_1 = self.r[i, :]
             t3_0 = self.t3[i_m1, :]
             t3_1 = self.t3[i, :]
-
             dr = vec_sub3(r_1, r_0)
             dr_par = vec_dot3(t3_0, dr)
             dr_perp = vec_sub3(dr, vec_scale3(t3_0, dr_par))
@@ -1378,6 +1380,22 @@ cdef class SSWLC(PolymerBase):
             for j in range(3):
                 bend[j] += -t3_0[j] - self.eta[i_m1] * dr_perp[j]
             E += self.E_pair(bend, dr_par, dr_perp, i_m1)
+
+        # Compute energy in the reverse direction
+        for i in range(self.num_beads - 1):
+            i_p1 = i + 1
+            r_0 = self.r[i_p1, :]
+            r_1 = self.r[i, :]
+            t3_0 = self.t3[i_p1, :]
+            t3_1 = self.t3[i, :]
+            dr = vec_sub3(r_1, r_0)
+            dr_par = vec_dot3(t3_0, dr)
+            dr_perp = vec_sub3(dr, vec_scale3(t3_0, dr_par))
+            bend = t3_1.copy()
+            for j in range(3):
+                bend[j] += -t3_0[j] - self.eta[i] * dr_perp[j]
+            E += self.E_pair(bend, dr_par, dr_perp, i)
+
         return E
 
     cdef double binding_dE(self, long ind0, long indf, long n_inds):
@@ -2253,7 +2271,8 @@ cdef class SSTWLC(SSWLC):
         Notes
         -----
         This method loops over each bond in the polymer and calculates the 
-        energy change of that bond.
+        energy change of that bond. Notice, the polymer energy is computed
+        by representing the bonds in both the forward and reverse directions.
 
         Returns
         -------
@@ -2266,6 +2285,8 @@ cdef class SSTWLC(SSWLC):
         cdef double[:] r_0, r_1, t3_0, t3_1, t2_0, t2_1
 
         E = 0
+
+        # Compute energy in the forward direction
         for i in range(1, self.num_beads):
             i_m1 = i - 1
             r_0 = self.r[i_m1, :]
@@ -2295,6 +2316,38 @@ cdef class SSTWLC(SSWLC):
             for j in range(3):
                 bend[j] += -t3_0[j] - self.eta[i_m1] * dr_perp[j]
             E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i_m1)
+
+        # Compute energy in the reverse direction
+        for i in range(self.num_beads - 1):
+            i_p1 = i + 1
+            r_0 = self.r[i_p1, :]
+            r_1 = self.r[i, :]
+            t3_0 = self.t3[i_p1, :]
+            t3_1 = self.t3[i, :]
+            t2_0 = self.t2[i_p1, :]
+            t2_1 = self.t2[i, :]
+            t1_0 = np.array([
+                t2_0[1] * t3_0[2] - t2_0[2] * t3_0[1],
+                t2_0[2] * t3_0[0] - t2_0[0] * t3_0[2],
+                t2_0[0] * t3_0[1] - t2_0[1] * t3_0[0]
+            ])
+            t1_1 = np.array([
+                t2_1[1] * t3_1[2] - t2_1[2] * t3_1[1],
+                t2_1[2] * t3_1[0] - t2_1[0] * t3_1[2],
+                t2_1[0] * t3_1[1] - t2_1[1] * t3_1[0]
+            ])
+            omega = np.arctan2(
+                (np.dot(t2_0, t1_1) - np.dot(t1_0, t2_1)),
+                (np.dot(t1_0, t1_1) + np.dot(t2_0, t2_1))
+            )
+            dr = vec_sub3(r_1, r_0)
+            dr_par = vec_dot3(t3_0, dr)
+            dr_perp = vec_sub3(dr, vec_scale3(t3_0, dr_par))
+            bend = t3_1.copy()
+            for j in range(3):
+                bend[j] += -t3_0[j] - self.eta[i] * dr_perp[j]
+            E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i)
+
         return E
 
     cpdef double compute_E_no_twist(self):
@@ -2316,13 +2369,14 @@ cdef class SSTWLC(SSWLC):
         cdef double[:] r_0, r_1, t3_0, t3_1
 
         E = 0
+
+        # Compute energy in the forward direction
         for i in range(1, self.num_beads):
             i_m1 = i - 1
             r_0 = self.r[i_m1, :]
             r_1 = self.r[i, :]
             t3_0 = self.t3[i_m1, :]
             t3_1 = self.t3[i, :]
-
             dr = vec_sub3(r_1, r_0)
             dr_par = vec_dot3(t3_0, dr)
             dr_perp = vec_sub3(dr, vec_scale3(t3_0, dr_par))
@@ -2330,6 +2384,22 @@ cdef class SSTWLC(SSWLC):
             for j in range(3):
                 bend[j] += -t3_0[j] - self.eta[i_m1] * dr_perp[j]
             E += self.E_pair(bend, dr_par, dr_perp, i_m1)
+
+        # Compute energy in the reverse direction
+        for i in range(self.num_beads - 1):
+            i_p1 = i + 1
+            r_0 = self.r[i_p1, :]
+            r_1 = self.r[i, :]
+            t3_0 = self.t3[i_p1, :]
+            t3_1 = self.t3[i, :]
+            dr = vec_sub3(r_1, r_0)
+            dr_par = vec_dot3(t3_0, dr)
+            dr_perp = vec_sub3(dr, vec_scale3(t3_0, dr_par))
+            bend = t3_1.copy()
+            for j in range(3):
+                bend[j] += -t3_0[j] - self.eta[i] * dr_perp[j]
+            E += self.E_pair(bend, dr_par, dr_perp, i)
+
         return E
 
 
@@ -3181,6 +3251,8 @@ cdef class DetailedChromatinWithSterics(DetailedChromatin):
         cdef double[:] r_0, r_1, t3_0, t3_1, t2_0, t2_1
 
         E = 0
+
+        # Compute elastic energy in the forward direction
         for i in range(1, self.num_beads):
             i_m1 = i - 1
 
@@ -3218,7 +3290,46 @@ cdef class DetailedChromatinWithSterics(DetailedChromatin):
             for j in range(3):
                 bend[j] += -t3o_0[j] - self.eta[i_m1] * dr_perp[j]
             E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i_m1)
-        E_elastic = E
+
+        # Compute elastic energy in the reverse direction
+        for i in range(self.num_beads - 1):
+            i_p1 = i + 1
+
+            # Get the entry/exit positions and orientations!
+            ri_0, ro_0, t3i_0, t3o_0, t2i_0, t2o_0 = \
+                self.beads[i].update_configuration(
+                    np.asarray(self.r[i_p1, :]),
+                    np.asarray(self.t3[i_p1, :]),
+                    np.asarray(self.t2[i_p1, :])
+                )
+            ri_1, ro_1, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                self.beads[i].update_configuration(
+                    np.asarray(self.r[i, :]),
+                    np.asarray(self.t3[i, :]),
+                    np.asarray(self.t2[i, :])
+                )
+            t1_0 = np.array([
+                t2i_0[1] * t3i_0[2] - t2i_0[2] * t3i_0[1],
+                t2i_0[2] * t3i_0[0] - t2i_0[0] * t3i_0[2],
+                t2i_0[0] * t3i_0[1] - t2i_0[1] * t3i_0[0]
+            ])
+            t1_1 = np.array([
+                t2o_1[1] * t3o_1[2] - t2o_1[2] * t3o_1[1],
+                t2o_1[2] * t3o_1[0] - t2o_1[0] * t3o_1[2],
+                t2o_1[0] * t3o_1[1] - t2o_1[1] * t3o_1[0]
+            ])
+            omega = np.arctan2(
+                (np.dot(t2i_0, t1_1) - np.dot(t1_0, t2o_1)),
+                (np.dot(t1_0, t1_1) + np.dot(t2i_0, t2o_1))
+            )
+            dr = vec_sub3(ro_1, ri_0)
+            dr_par = vec_dot3(t3i_0, dr)
+            dr_perp = vec_sub3(dr, vec_scale3(t3i_0, dr_par))
+            bend = t3o_1.copy()
+            for j in range(3):
+                bend[j] += -t3i_0[j] - self.eta[i] * dr_perp[j]
+            E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i)
+
         E_elastic = E
 
         # Compute the energy change associated with sterics
@@ -3262,10 +3373,9 @@ cdef class DetailedChromatinWithSterics(DetailedChromatin):
         cdef double[:] r_0, r_1, t3_0, t3_1, t2_0, t2_1
 
         E = 0
+        # Compute elastic energy in the forward direction
         for i in range(1, self.num_beads):
             i_m1 = i - 1
-
-            # Get the entry/exit positions and orientations!
             ri_0, ro_0, t3i_0, t3o_0, t2i_0, t2o_0 = \
                 self.beads[i_m1].update_configuration(
                     np.asarray(self.r[i_m1, :]),
@@ -3288,8 +3398,6 @@ cdef class DetailedChromatinWithSterics(DetailedChromatin):
                 t2i_1[2] * t3i_1[0] - t2i_1[0] * t3i_1[2],
                 t2i_1[0] * t3i_1[1] - t2i_1[1] * t3i_1[0]
             ])
-
-            # Forward direction
             omega = np.arctan2(
                 (np.dot(t2o_0, t1_1) - np.dot(t1_0, t2i_1)),
                 (np.dot(t1_0, t1_1) + np.dot(t2o_0, t2i_1))
@@ -3302,18 +3410,42 @@ cdef class DetailedChromatinWithSterics(DetailedChromatin):
                 bend[j] += -t3o_0[j] - self.eta[i_m1] * dr_perp[j]
             E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i_m1)
 
-            # Reverse Direction
+        # Compute elastic energy in the reverse direction
+        for i in range(self.num_beads - 1):
+            i_p1 = i + 1
+            ri_0, ro_0, t3i_0, t3o_0, t2i_0, t2o_0 = \
+                self.beads[i].update_configuration(
+                    np.asarray(self.r[i_p1, :]),
+                    np.asarray(self.t3[i_p1, :]),
+                    np.asarray(self.t2[i_p1, :])
+                )
+            ri_1, ro_1, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                self.beads[i].update_configuration(
+                    np.asarray(self.r[i, :]),
+                    np.asarray(self.t3[i, :]),
+                    np.asarray(self.t2[i, :])
+                )
+            t1_0 = np.array([
+                t2i_0[1] * t3i_0[2] - t2i_0[2] * t3i_0[1],
+                t2i_0[2] * t3i_0[0] - t2i_0[0] * t3i_0[2],
+                t2i_0[0] * t3i_0[1] - t2i_0[1] * t3i_0[0]
+            ])
+            t1_1 = np.array([
+                t2o_1[1] * t3o_1[2] - t2o_1[2] * t3o_1[1],
+                t2o_1[2] * t3o_1[0] - t2o_1[0] * t3o_1[2],
+                t2o_1[0] * t3o_1[1] - t2o_1[1] * t3o_1[0]
+            ])
             omega = np.arctan2(
-                (np.dot(t2i_1, t1_0) - np.dot(t1_1, t2o_0)),
-                (np.dot(t1_1, t1_0) + np.dot(t2i_1, t2o_0))
+                (np.dot(t2i_0, t1_1) - np.dot(t1_0, t2o_1)),
+                (np.dot(t1_0, t1_1) + np.dot(t2i_0, t2o_1))
             )
-            dr = vec_sub3(ro_0, ri_1)
-            dr_par = vec_dot3(t3i_1, dr)
-            dr_perp = vec_sub3(dr, vec_scale3(t3i_1, dr_par))
-            bend = t3o_0.copy()
+            dr = vec_sub3(ro_1, ri_0)
+            dr_par = vec_dot3(t3i_0, dr)
+            dr_perp = vec_sub3(dr, vec_scale3(t3i_0, dr_par))
+            bend = t3o_1.copy()
             for j in range(3):
-                bend[j] += -t3i_1[j] - self.eta[i_m1] * dr_perp[j]
-            E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i_m1)
+                bend[j] += -t3i_0[j] - self.eta[i] * dr_perp[j]
+            E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i)
 
         E_elastic = E
 
