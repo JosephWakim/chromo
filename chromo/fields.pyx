@@ -89,6 +89,7 @@ cdef class FieldBase:
         self.n_polymers = len(polymers)
         self.binders = binders
         self.confine_type = ""
+        self.confine_length = 0.0
 
     def __str__(self):
         """Print representation of empty field.
@@ -104,34 +105,101 @@ cdef class FieldBase:
         """
         return self.polymers.__contains__(poly)
 
-    def compute_dE(
-        self, poly, inds, n_inds, packet_size, state_change
-    ) -> float:
+    cdef double compute_dE(
+        self, poly.PolymerBase poly, long[:] inds, long n_inds,
+        long packet_size, bint state_change
+    ):
         """Compute the change in field energy due to a proposed move.
+        """
+        raise NotImplementedError, "Reading compute_dE from base class"
+
+    cdef void update_affected_densities(self):
+        raise NotImplementedError, \
+            "Reading update_affected_densities from base class"
+        pass
+
+    cdef double get_confinement_dE(
+        self, poly.PolymerBase poly, long[:] inds, long n_beads, int trial
+    ):
+        """Evaluate the energy associated with a confining boundary.
+
+        Notes
+        -----
+        A large energy is assigned to any point lies outside the confinement;
+        otherwise, an energy contribution of zero is returned.
+
+        This method is where different confinement types can be defined.
+        However, if a non-spherical confinement is defined, adjustments need
+        to be made to `self.get_accessible_volumes()`, which currently supports
+        spherical confinements.
 
         Parameters
         ----------
-        poly : `chromo.PolymerBase`
-            The polymer which has been moved
-        inds : array_like (N,)
-            Indices of beads being moved
-        n_inds : long
-            Number of beads affected by the move
-        packet_size : long
-            Number of points to average together when calculating the field
-            energy change of a move; done to reduce the computational expense
-            of the field energy calculation (at the expense of precision)
-        state_change : bint
-            Indicator for whether the MC move involved a change in binding
-            state (1) or not (0; default)
+        poly : poly.PolymerBase
+            The polymer which has been moved.
+        inds : long[:]
+            Vector of bead indices for which to evaluate confinement
+        n_beads : long
+            Number of beads for which to evaluate confinement
+        trial : int
+            Indicator of whether to evaluate confinement on trial positions (1)
+            or current positions (0)
 
         Returns
         -------
         double
-            The change in energy caused by the Polymer's movement in this
-            field.
+            Energy contribution of the confinement; either zero if all points
+            lie inside the confinement or some large value ensuring the move
+            gets rejected if any point lies outside the confinement
         """
-        pass
+        cdef long i
+        cdef long num_out_of_bounds = 0
+        cdef double dist
+
+        # No Confinement
+        if self.confine_type == "":
+            return 0.
+
+        # Spherical confinement
+        elif self.confine_type == "Spherical":
+            if trial == 1:
+                for i in range(n_beads):
+                    dist = sqrt(
+                        vec_dot3(poly.r_trial[inds[i]], poly.r_trial[inds[i]])
+                    )
+                    if dist > self.confine_length:
+                        num_out_of_bounds += 1
+            elif trial == 0:
+                for i in range(n_beads):
+                    dist = sqrt(vec_dot3(poly.r[inds[i]], poly.r[inds[i]]))
+                    if dist > self.confine_length:
+                        num_out_of_bounds += 1
+            else:
+                raise ValueError("Trial flag " + str(trial) + " not found.")
+            return num_out_of_bounds * E_HUGE
+
+        # Cubical confinement
+        elif self.confine_type == "Cubical":
+            if trial == 1:
+                for i in range(n_beads):
+                    for j in range(3):
+                        if np.abs(poly.r_trial[inds[i], j]) > self.confine_length / 2:
+                            num_out_of_bounds += 1
+            elif trial == 0:
+                if trial == 1:
+                    for i in range(n_beads):
+                        for j in range(3):
+                            if np.abs(poly.r[inds[i], j]) > self.confine_length / 2:
+                                num_out_of_bounds += 1
+            else:
+                raise ValueError("Trial flag " + str(trial) + " not found.")
+            return num_out_of_bounds * E_HUGE
+
+        # Confinement type not found
+        else:
+            raise ValueError(
+                "Confinement type " + self.confine_type + " not found."
+            )
 
 
 class Reconstructor:
@@ -213,10 +281,14 @@ cdef class NullField(FieldBase):
     """A field with no energy contributions.
     """
 
-    def __init__(self):
+    def __init__(self, polymers = None, confine_type="", confine_length=0.0):
+        if polymers is None:
+            polymers = []
         super(NullField, self).__init__(
-            polymers = [], binders = pd.DataFrame()
+            polymers, binders = pd.DataFrame()
         )
+        self.confine_type = confine_type
+        self.confine_length = confine_length
 
     def to_file(self, path):
         """Save Field description.
@@ -234,7 +306,19 @@ cdef class NullField(FieldBase):
         self, poly.PolymerBase poly, long[:] inds, long n_inds,
         long packet_size, bint state_change
     ):
-        return 0
+        """Compute the change in energy associated with the null field.
+        
+        Notes
+        -----
+        The field energy change associated with the null field can only come
+        from the confinement.        
+        """
+        dE = self.get_confinement_dE(poly, inds, n_inds, trial=1)
+        dE -= self.get_confinement_dE(poly, inds, n_inds, trial=0)
+        return dE
+
+    cdef void update_affected_densities(self):
+        pass
 
 
 cdef class UniformDensityField(FieldBase):
@@ -1147,89 +1231,6 @@ cdef class UniformDensityField(FieldBase):
         )
 
         return dE
-
-    cdef double get_confinement_dE(
-        self, poly.PolymerBase poly, long[:] inds, long n_beads, int trial
-    ):
-        """Evaluate the energy associated with a confining boundary.
-
-        Notes
-        -----
-        A large energy is assigned to any point lies outside the confinement;
-        otherwise, an energy contribution of zero is returned.
-
-        This method is where different confinement types can be defined.
-        However, if a non-spherical confinement is defined, adjustments need
-        to be made to `self.get_accessible_volumes()`, which currently supports
-        spherical confinements.
-
-        Parameters
-        ----------
-        poly : poly.PolymerBase
-            The polymer which has been moved.
-        inds : long[:]
-            Vector of bead indices for which to evaluate confinement
-        n_beads : long
-            Number of beads for which to evaluate confinement
-        trial : int
-            Indicator of whether to evaluate confinement on trial positions (1)
-            or current positions (0)
-
-        Returns
-        -------
-        double
-            Energy contribution of the confinement; either zero if all points
-            lie inside the confinement or some large value ensuring the move
-            gets rejected if any point lies outside the confinement
-        """
-        cdef long i
-        cdef long num_out_of_bounds = 0
-        cdef double dist
-
-        # No Confinement
-        if self.confine_type == "":
-            return 0.
-
-        # Spherical confinement
-        elif self.confine_type == "Spherical":
-            if trial == 1:
-                for i in range(n_beads):
-                    dist = sqrt(
-                        vec_dot3(poly.r_trial[inds[i]], poly.r_trial[inds[i]])
-                    )
-                    if dist > self.confine_length:
-                        num_out_of_bounds += 1
-            elif trial == 0:
-                for i in range(n_beads):
-                    dist = sqrt(vec_dot3(poly.r[inds[i]], poly.r[inds[i]]))
-                    if dist > self.confine_length:
-                        num_out_of_bounds += 1
-            else:
-                raise ValueError("Trial flag " + str(trial) + " not found.")
-            return num_out_of_bounds * E_HUGE
-
-        # Cubical confinement
-        elif self.confine_type == "Cubical":
-            if trial == 1:
-                for i in range(n_beads):
-                    for j in range(3):
-                        if np.abs(poly.r_trial[inds[i], j]) > self.confine_length / 2:
-                            num_out_of_bounds += 1
-            elif trial == 0:
-                if trial == 1:
-                    for i in range(n_beads):
-                        for j in range(3):
-                            if np.abs(poly.r[inds[i], j]) > self.confine_length / 2:
-                                num_out_of_bounds += 1
-            else:
-                raise ValueError("Trial flag " + str(trial) + " not found.")
-            return num_out_of_bounds * E_HUGE
-
-        # Confinement type not found
-        else:
-            raise ValueError(
-                "Confinement type " + self.confine_type + " not found."
-            )
 
     cdef long[:] get_change_in_density_quickly(
         self, poly.PolymerBase poly, long[:] inds, long n_inds,

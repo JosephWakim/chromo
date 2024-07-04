@@ -11,12 +11,27 @@ cdef class FieldBase:
     cdef public long n_polymers
     cdef public binders
     cdef public str confine_type
+    cdef public double confine_length
+
+    cdef double compute_dE(
+        self, poly.PolymerBase poly, long[:] inds, long n_inds,
+        long packet_size, bint state_change
+    )
+    cdef void update_affected_densities(self)
+    cdef double get_confinement_dE(
+        self,
+        poly.PolymerBase poly,
+        long[:] inds,
+        long n_inds,
+        int trial
+    )
 
 cdef class NullField(FieldBase):
     cdef double compute_dE(
         self, poly.PolymerBase poly, long[:] inds, long n_inds,
         long packet_size, bint state_change
     )
+    cdef void update_affected_densities(self)
 
 cdef class UniformDensityField(FieldBase):
     cdef public _field_descriptors
@@ -36,7 +51,6 @@ cdef class UniformDensityField(FieldBase):
     cdef public long[:, ::1] index_xyz_with_trial
     cdef public long num_binders
     cdef public long[:] doubly_bound, doubly_bound_trial
-    cdef public double confine_length
     cdef public double[:, ::1] density, density_trial
     cdef public dict access_vols
     cdef public double chi, sub_bin_width_x, sub_bin_width_y, sub_bin_width_z
@@ -68,13 +82,6 @@ cdef class UniformDensityField(FieldBase):
     cdef double compute_dE(
         self, poly.PolymerBase poly, long[:] inds, long n_inds,
         long packet_size, bint state_change
-    )
-    cdef double get_confinement_dE(
-        self,
-        poly.PolymerBase poly,
-        long[:] inds,
-        long n_inds,
-        int trial
     )
     cdef long[:] get_change_in_density(
         self, poly.PolymerBase poly, long[:] inds, long n_inds,

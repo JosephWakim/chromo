@@ -276,7 +276,7 @@ def gaussian_walk(
     ----------
     num_steps : int
         Number of steps in the Gaussian random walk
-    step_sizes : np.ndarrau
+    step_sizes : np.ndarray
         Distances between subsequent points in the random walk
 
     Returns
