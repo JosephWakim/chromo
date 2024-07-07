@@ -3284,6 +3284,78 @@ cdef class DetailedChromatinWithSterics(DetailedChromatin):
             "interaction": E_interactions, "total": E
         }
 
+    cpdef dict compute_E_detailed_reverse(self):
+            """Compute the overall polymer energy at the current configuration.
+
+            Notes
+            -----
+            This method computes the total energy of a configuration in the
+            opposite direction of `compute_E_detailed`. It is intended just
+            to show that the CHANGE in energy is dependent on the way that
+            energy is calculated. We need to calculate total energy with the
+            same indexing scheme that we use to calculate the change in energy
+            with each MC step.
+
+            Returns
+            -------
+            Dict[str, float]
+                Dictionary of the elastic, steric, interaction, and total energy
+                of a configuration.
+            """
+            cdef double E, dr_par
+            cdef long i, j, i_p1
+            cdef double[:] dr, dr_perp, bend
+            cdef double[:] r_0, r_1, t3_0, t3_1, t2_0, t2_1
+
+            E = 0
+
+            # Compute elastic energy
+            for i in range(self.num_beads - 1):
+                i_p1 = i + 1
+                ri_0, ro_0, t3i_0, t3o_0, t2i_0, t2o_0 = \
+                    self.beads[i_p1].update_configuration(
+                        np.asarray(self.r[i_p1, :]),
+                        np.asarray(self.t3[i_p1, :]),
+                        np.asarray(self.t2[i_p1, :])
+                    )
+                ri_1, ro_1, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                    self.beads[i].update_configuration(
+                        np.asarray(self.r[i, :]),
+                        np.asarray(self.t3[i, :]),
+                        np.asarray(self.t2[i, :])
+                    )
+                omega = compute_twist_angle_omega(t2i_0, t3i_0, t2o_1, t3o_1)
+                dr = vec_sub3(ro_1, ri_0)
+                dr_par = vec_dot3(t3i_0, dr)
+                dr_perp = vec_sub3(dr, vec_scale3(t3i_0, dr_par))
+                bend = t3o_1.copy()
+                for j in range(3):
+                    bend[j] += -t3i_0[j] - self.eta[i] * dr_perp[j]
+                E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i)
+            E_elastic = E
+
+            # Compute the energy change associated with sterics
+            E = 0
+            # Compute pairwise distances between nucleosomes
+            self.get_distances()
+            # Evaluate the energy of steric clashes
+            E = self.eval_E_steric_clashes()
+            E_sterics = E
+
+            # Compute change in reader protein interactions
+            E = 0
+            if self.num_binders > 0:
+                E = self.get_E_bind()
+            E_interactions = E
+
+            # compute the total energy
+            E = E_elastic + E_sterics + E_interactions
+
+            return {
+                "elastic": E_elastic, "steric": E_sterics,
+                "interaction": E_interactions, "total": E
+            }
+
 
 cpdef double sin_func(double x):
     """Sine function to which the polymer will be initialized.

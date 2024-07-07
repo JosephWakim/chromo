@@ -535,6 +535,10 @@ def test_compute_dE_sterics():
     assert np.isclose(E_interaction_original, 0), \
         "The interaction energy should be zero."
 
+    # Compute the energy of the system with opposite indexing
+    # Temporary, to explore how indexing affects the energy calculation
+    # E_dict_reverse = p.compute_E_detailed_reverse()
+
     # Move nucleosomes to generate clashes
     dE = 0
     dE_clash = 0
@@ -579,6 +583,15 @@ def test_compute_dE_sterics():
         "The final steric energy is not being calculated consistently."
     assert np.isclose(E_steric_final_1, E_steric_original + dE_clash), \
         "Change in steric energy is not consistent."
+
+    # Compute the energy of the system with opposite indexing
+    # Temporary, to explore how indexing affects the energy calculation
+    # E_dict_reverse_final = p.compute_E_detailed_reverse()
+    # reverse_dE = E_dict_reverse_final["total"] - E_dict_reverse["total"]
+    # assert np.isclose(reverse_dE, dE), \
+    #     "The energy change is not consistent when the polymer is indexed " \
+    #     "in reverse. The change in energy is " + str(reverse_dE) + \
+    #     " instead of " + str(dE) + "."
 
     # Check the total energy
     E_total_final = E_dict["total"]
