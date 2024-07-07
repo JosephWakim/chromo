@@ -75,6 +75,10 @@ def test_dE_with_twist():
     E_twist_0 = E_0 - p.compute_E_no_twist()
     frac_twist = E_twist_0 / E_0
 
+    # When initialized as a straight chain, most energy should be in twist
+    assert frac_twist > 0.9, \
+        "When initialized as a straight chain, most energy should be in twist."
+
     # When initialized with the chain growth algorithm, a smaller fraction of
     # the energy should be in twist
     linker_lengths_bp = np.ones(n_beads-1, dtype=int) * linker_length_bp

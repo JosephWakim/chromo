@@ -524,23 +524,31 @@ def test_compute_dE_sterics():
 
     # Evaluate energy of initial configuration
     E_dict = p.compute_E_detailed()
+    E_total_original = E_dict["total"]
     E_elastic_original = E_dict["elastic"]
+    E_interaction_original = E_dict["interaction"]
     E_steric_original = E_dict["steric"]
     print(f"Original Clash Energy: {E_steric_original}")
     print(f"Original Elastic Energy: {E_elastic_original}")
     assert np.isclose(E_steric_original, p.eval_E_steric_clashes()), \
         "The initial steric energy is not being calculated correctly."
+    assert np.isclose(E_interaction_original, 0), \
+        "The interaction energy should be zero."
 
     # Move nucleosomes to generate clashes
     dE = 0
     dE_clash = 0
     for i in range(1, n_beads):
+
+        # Evaluate the starting energy of the move
+        E_dict_start = p.compute_E_detailed()
+
+        # Conduct a move and evaluate the change in energy
         p.r_trial[i] = p.r_trial[i - 1].copy()
         p.r_trial[i][0] += 0.999 * (p.beads[i].rad * 2)
-
         p.get_delta_distances(i, i+1)
-        dE_clash += p.eval_delta_steric_clashes(i, i+1)
-
+        dE_clash_ = p.eval_delta_steric_clashes(i, i+1)
+        dE_clash += dE_clash_
         inds = np.array([i])
         dE_ = p.compute_dE("slide", inds, 1)
         dE += dE_
@@ -549,6 +557,18 @@ def test_compute_dE_sterics():
             p, 0, inds, 1, log_move=False,
             log_update=False, update_distances=True
         )
+
+        # Evaluate the final energy of the move
+        E_dict_end = p.compute_E_detailed()
+
+        # Verify that the energy change is consistent
+        assert np.isclose(E_dict_end["steric"], E_dict_start["steric"] + dE_clash_), \
+            "The steric energy change is not consistent."
+        assert np.isclose(
+            E_dict_end["elastic"], E_dict_start["elastic"] + (dE_-dE_clash_)
+        ), "The elastic energy change is not consistent."
+        assert np.isclose(E_dict_end["total"], E_dict_start["total"] + dE_), \
+            "The energy change is not consistent."
 
     # Check calculation of steric energy
     E_dict = p.compute_E_detailed()
@@ -561,9 +581,14 @@ def test_compute_dE_sterics():
     assert np.isclose(E_steric_final_1, E_steric_original + dE_clash), \
         "Change in steric energy is not consistent."
 
+    # Check the total energy
+    E_total_final = E_dict["total"]
+    assert(np.isclose(E_total_final, E_total_original + dE)), \
+        "The total energy is not being calculated consistently."
+
     # Check calculation of elastic energy
     E_elastic_final_1 = E_dict["elastic"]
-    E_elastic_final_2 = E_dict["total"]  - E_steric_final_2
+    E_elastic_final_2 = E_dict["total"] - E_steric_final_2
     print("Final Elastic Energy:", E_elastic_final_1)
     assert np.isclose(E_elastic_final_1, E_elastic_final_2), \
         "The final elastic energy is not being calculated consistently."
