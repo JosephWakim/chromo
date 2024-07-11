@@ -22,7 +22,7 @@ sys.path.insert(1, parent_dir)
 # -- Project information -----------------------------------------------------
 
 project = 'chromo'
-copyright = '2022, Joseph Wakim, Bruno Beltran, Andrew Spakowitz'
+copyright = '2024, Joseph Wakim, Bruno Beltran, Andrew Spakowitz'
 author = 'Joseph Wakim, Bruno Beltran, Andrew Spakowitz'
 
 
@@ -64,13 +64,20 @@ exclude_patterns = ['_build', '**.ipynb_checkpoints']
 # This would need a new package supporting the rtd theme
 # html_theme = 'sphinx_rtd_theme'
 
-html_theme = 'stanford_theme'
-html_theme_path = [sphinx_theme.get_html_theme_path('stanford-theme')]
+# html_theme = 'stanford_theme'
+# html_theme_path = [sphinx_theme.get_html_theme_path('stanford-theme')]
+
+html_theme = 'neo_rtd_theme'
+html_theme_path = [sphinx_theme.get_html_theme_path('neo_rtd_theme')]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ['_static']
+
+# Add custom CSS to increase the margins in the Jupyter notebooks
+def setup(app):
+    app.add_css_file('custom.css')
 
 # Autodoc settings
 autosummary_generate = True

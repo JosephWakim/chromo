@@ -22,7 +22,7 @@ The bins are defined by the three indices
 :math:`M_{z}-1`, respectively.
 
 
-We consider the :math:`n`th bead located at position :math:`\vec{r}^{(n)}`.
+We consider the :math:`n` th bead located at position :math:`\vec{r}^{(n)}`.
 We define a weight function :math:`w_{I}(\vec{r}^{(n)})` within the :math:`I`th bin.
 The :math:`I`th index is defined to be a superindex that combines
 :math:`i_{x}`,
@@ -30,12 +30,12 @@ The :math:`I`th index is defined to be a superindex that combines
 :math:`i_{z}` into a single unique index :math:`I= i_{x} + M_{x} i_{y} + M_{x}M_{z} i_{z}` that
 runs from zero to :math:`M_{x}M_{y}M_{z}-1` (total of :math:`M_{x}M_{y}M_{z}` unique indices)
 The total weight on the :math:`I`th bin is given by the contributions from the three cartesian
-directions, \emph{i.e.}
+directions, `i.e.`
 :math:`w_{I}(\vec{r}^{(n)}) =
 w_{i_{x}}^{(x)}(x^{(n)})
 w_{i_{y}}^{(y)}(y^{(n)})
 w_{i_{z}}^{(z)}(z^{(n)})`.
-Figure~\ref{fig:weight} shows a schematic of the :math:`x`-direction weight function (same method for :math:`y` and :math:`z`).
+The figure below shows a schematic of the :math:`x`-direction weight function (same method for :math:`y` and :math:`z`).
 This shows a linear interpolation weighting method, consistent with Refs. [Pike2009a]_, [Pike2009b]_.
 
 .. figure:: figures/weight.pdf
@@ -48,7 +48,7 @@ This shows a linear interpolation weighting method, consistent with Refs. [Pike2
     :math:`x`-direction based on a linear interpolation method
 
 
-The number of epigenetic proteins (\emph{e.g.} HP1) to the :math:`n`th site is given by :math:`N_{I}^{(\alpha)}`, where :math:`\alpha` determines
+The number of epigenetic proteins (`e.g.` HP1) to the :math:`n`th site is given by :math:`N_{I}^{(\alpha)}`, where :math:`\alpha` determines
 the type of epigenetic mark.
 The :math:`\alpha`-protein density within the :math:`I`th bin is given by
 
