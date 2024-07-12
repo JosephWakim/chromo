@@ -1,0 +1,548 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>chromo.util.mc_stat &mdash; chromo  documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+    <link rel="stylesheet" href="../../../_static/plot_directive.css" type="text/css" />
+  
+    <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+        <link rel="search" title="Search" href="../../../search.html"/>
+    <link rel="top" title="chromo  documentation" href="../../../index.html"/>
+        <link rel="up" title="chromo.util" href="../util.html"/> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> chromo
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../abstract.html">Abstract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure.html">Code Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mc_sim.html">Monte Carlo Simulations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Theory</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../poly_models.html">Polymer Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../field.html">Field Theoretic Treatment of Interactions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_1_unconfined_semiflexible_homopolymer.html">1. Unconfined, Semiflexible Homopolymer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_2_confined_semiflexible_homopolymer.html">2. Confined, Semiflexible Homopolymer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_3_one_mark_chromatin.html">3. Single-Mark Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_4_two_mark_chromatin.html">4. Two-Mark Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_5_two_mark_chromatin_competitive.html">5. Two-Mark Chromatin Simulation with Competitive Binding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_6_two_step_refinement.html">6. Simulation with Coarse and Refined Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_7_kinked_chromatin.html">7. Kinked Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_8_kinked_chromatin_with_sterics.html">8. Kinked Chromatin Simulation with Sterics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_snippets.html">Code Snippets</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">chromo</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../util.html">chromo.util</a> &raquo;</li>
+        
+      <li>chromo.util.mc_stat</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for chromo.util.mc_stat</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Utilities for tracking MC move acceptance rates.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Built-in Modules</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+
+<span class="c1"># External Modules</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="Tracker"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.Tracker">[docs]</a><span class="k">class</span> <span class="nc">Tracker</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract class representation of a MC performance tracker.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Tracker.create_log_file"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.Tracker.create_log_file">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">create_log_file</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create an output file for the tracker.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Tracker.log_move"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.Tracker.log_move">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">log_move</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Log performance after an MC move.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Tracker.save_move_log"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.Tracker.save_move_log">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">save_move_log</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save the log to the output file, then reset log.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div></div>
+
+
+<div class="viewcode-block" id="AcceptanceTracker"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.AcceptanceTracker">[docs]</a><span class="k">class</span> <span class="nc">AcceptanceTracker</span><span class="p">(</span><span class="n">Tracker</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class representation of MC acceptance rate tracker.</span>
+
+<span class="sd">    Tracks acceptance rate of attempted MC moves of a particular type.</span>
+<span class="sd">    Downweights historical acceptance rates with each step to more heavily</span>
+<span class="sd">    consider recent acceptance rates. Logs the acceptance rate, move amplitude,</span>
+<span class="sd">    and bead selection amplitude with each step.</span>
+
+<span class="sd">    This class will provide metrics to the MC adapter, which will dynamically</span>
+<span class="sd">    adjust move and bead amplitudes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">log_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">log_file_prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">moves_in_average</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the performance tracker object.</span>
+
+<span class="sd">        Move acceptance rate will be tracked as an &quot;N-day&quot; exponentially</span>
+<span class="sd">        weighted moving average (EWMA), where N gives the number of moves to</span>
+<span class="sd">        track in the average, specified by `moves_in_average`. This results in</span>
+<span class="sd">        a decay factor `alpha` = 2 / (`moves_in_average` + 1).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        log_dir : str</span>
+<span class="sd">            Path to the directory into which to save logs of bead/move</span>
+<span class="sd">            amplitudes and acceptance rates</span>
+<span class="sd">        log_file_prefix : str</span>
+<span class="sd">            File prefix for log file tracking bead/move amplitudes and</span>
+<span class="sd">            acceptance rate</span>
+<span class="sd">        moves_in_average : float</span>
+<span class="sd">            Number of historical moves to track in incremental measure of move</span>
+<span class="sd">            acceptance rate</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span> <span class="o">=</span> <span class="n">log_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_file_prefix</span> <span class="o">=</span> <span class="n">log_file_prefix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">moves_in_average</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acceptance_rate</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_bead_limit_log</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_move_limit_log</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_bead_realized_log</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_move_realized_log</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dE_log</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">move_accepted</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acceptance_log</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="AcceptanceTracker.create_log_file"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.AcceptanceTracker.create_log_file">[docs]</a>    <span class="k">def</span> <span class="nf">create_log_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the log file tracking amplitudes and acceptance rates.</span>
+
+<span class="sd">        The log file will have five columns: snapshot count, iteration count</span>
+<span class="sd">        bead selection amplitude, move amplitude, and move acceptance rate.</span>
+
+<span class="sd">        Snapshot count and will be recorded as constant values for each</span>
+<span class="sd">        snapshot. The iteration count, bead selection amplitude, move</span>
+<span class="sd">        amplitude, and move acceptance rate will be recorded for each iteration</span>
+<span class="sd">        in the snapshot.</span>
+
+<span class="sd">        This method simply creates the log file and adds the column labels. If</span>
+<span class="sd">        additional properties are to be logged, add them as column labels in</span>
+<span class="sd">        this method, and output them using the `save_move_log` method.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ind : int</span>
+<span class="sd">            Index with which to append log file name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">log_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">log_file_prefix</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;.csv&quot;</span>
+        <span class="n">column_labels</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;snapshot&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;iteration&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;bead_amp_limit&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;move_amp_limit&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;bead_amp_realized&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;move_amp_realized&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dE&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;accepted&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;acceptance_rate&quot;</span>
+        <span class="p">]</span>
+        <span class="n">initialize_table</span><span class="p">(</span><span class="n">log_path</span><span class="p">,</span> <span class="n">column_labels</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AcceptanceTracker.log_move"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.AcceptanceTracker.log_move">[docs]</a>    <span class="k">def</span> <span class="nf">log_move</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">amp_move_limit</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">amp_bead_limit</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">amp_move</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">amp_bead</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">dE</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a proposed move and current acceptance rate to the log.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        amp_move_limit : float</span>
+<span class="sd">            Maximum move amplitude allowed at current MC step</span>
+<span class="sd">        amp_bead_limit : int</span>
+<span class="sd">            Maximum bead selection amplitude allowed at current MC step</span>
+<span class="sd">        amp_move : float</span>
+<span class="sd">            Amplitude of the proposed move</span>
+<span class="sd">        amp_bead : int</span>
+<span class="sd">            Selection amplitude of the proposed move</span>
+<span class="sd">        dE : float</span>
+<span class="sd">            Change in energy associated with move</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_move_limit_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">amp_move_limit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_bead_limit_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">amp_bead_limit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_move_realized_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">amp_move</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_bead_realized_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">amp_bead</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dE_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dE</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acceptance_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acceptance_rate</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AcceptanceTracker.save_move_log"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.AcceptanceTracker.save_move_log">[docs]</a>    <span class="k">def</span> <span class="nf">save_move_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save the move and bead amplitude log to a file and clear lists.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        snapshot : int</span>
+<span class="sd">            Current snapshot number, with which to label</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">num_iterations</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">amp_move_realized_log</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">num_iterations</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">amp_bead_realized_log</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The number of bead selection amplitudes logged does not match </span><span class="se">\</span>
+<span class="s2">                the number of move amplitudes logged.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">num_iterations</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acceptance_log</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The number of move acceptance rates logged does not match the </span><span class="se">\</span>
+<span class="s2">                number of move amplitudes logged.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">log_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">log_file_prefix</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">snapshot</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;.csv&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">log_path</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_iterations</span><span class="p">):</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">snapshot</span><span class="p">,</span>
+                    <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">amp_bead_limit_log</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">amp_move_limit_log</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">amp_bead_realized_log</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">amp_move_realized_log</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dE_log</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">move_accepted</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">acceptance_log</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="p">]</span>
+                <span class="n">w</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_move_limit_log</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_bead_limit_log</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_move_realized_log</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amp_bead_realized_log</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dE_log</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">move_accepted</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acceptance_log</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+<div class="viewcode-block" id="AcceptanceTracker.update_acceptance_rate"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.AcceptanceTracker.update_acceptance_rate">[docs]</a>    <span class="k">def</span> <span class="nf">update_acceptance_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">accept</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">log_update</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Incrementally update acceptance rate based on move acceptance.</span>
+
+<span class="sd">        Apply an exponentially weighted moving average to maintain a running</span>
+<span class="sd">        measure of move acceptance weight.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        accept : int</span>
+<span class="sd">            Binary indicator of move acceptance (1.) or rejection (0.)</span>
+<span class="sd">        log_update : bint</span>
+<span class="sd">            Indicator for whether (1) or not (2) to record the updated</span>
+<span class="sd">            acceptance rate after the MC move</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">log_update</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">move_accepted</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">accept</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acceptance_rate</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">accept</span>
+        <span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">acceptance_rate</span></div></div>
+
+
+<div class="viewcode-block" id="ConfigurationTracker"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.ConfigurationTracker">[docs]</a><span class="k">class</span> <span class="nc">ConfigurationTracker</span><span class="p">(</span><span class="n">Tracker</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Track progressive reconfiguraion of the polymer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">initial_config</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the `ConfigurationTracker` object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        log_path : str</span>
+<span class="sd">            Path to the output file for confiruation tracker</span>
+<span class="sd">        initial_config : np.ndarray (N, 3)</span>
+<span class="sd">            Initial polymer configuration; rows represent individual beads and</span>
+<span class="sd">            columns represent (x, y, z) coordinates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="n">log_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">previous_config</span> <span class="o">=</span> <span class="n">initial_config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">=</span> <span class="n">initial_config</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">RMSD</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">RMSD_log</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="ConfigurationTracker.create_log_file"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.ConfigurationTracker.create_log_file">[docs]</a>    <span class="k">def</span> <span class="nf">create_log_file</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">column_labels</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;snapshot&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;iteration&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;step_RMSD&quot;</span>
+        <span class="p">]</span>
+        <span class="n">initialize_table</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="p">,</span> <span class="n">column_labels</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConfigurationTracker.log_move"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.ConfigurationTracker.log_move">[docs]</a>    <span class="k">def</span> <span class="nf">log_move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Log the change in polymer configuration.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        config : np.ndarray (N, 3)</span>
+<span class="sd">            Current polymer configuration; rows represent individual beads and</span>
+<span class="sd">            columns represent (x, y, z) coordinates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The shape of the table representing current polymer </span><span class="se">\</span>
+<span class="s2">                configuration is inconsistent with that of the previous </span><span class="se">\</span>
+<span class="s2">                configuration.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">RMSD</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">config</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">previous_config</span><span class="p">,</span> <span class="nb">ord</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">RMSD</span> <span class="o">=</span> <span class="n">RMSD</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">RMSD_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RMSD</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">previous_config</span> <span class="o">=</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="ConfigurationTracker.save_move_log"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.ConfigurationTracker.save_move_log">[docs]</a>    <span class="k">def</span> <span class="nf">save_move_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save to the `ConfigurationTracker` output file and reset log.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        snapshot : int</span>
+<span class="sd">            MC snapshot number</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">num_iterations</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">RMSD_log</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_iterations</span><span class="p">):</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">snapshot</span><span class="p">,</span>
+                    <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">RMSD_log</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                <span class="p">]</span>
+                <span class="n">w</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">RMSD_log</span> <span class="o">=</span> <span class="p">[]</span></div></div>
+
+
+<div class="viewcode-block" id="initialize_table"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.mc_stat.initialize_table">[docs]</a><span class="k">def</span> <span class="nf">initialize_table</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize a log file with empty columns.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to the log file being initiailzed</span>
+<span class="sd">    columns : List[str]</span>
+<span class="sd">        Column names for log file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;w+&#39;</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+    <span class="n">output</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2024, Joseph Wakim, Bruno Beltran, Andrew Spakowitz.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> and ❤️  using a custom <a href="https://github.com/LinxiFan/Sphinx-theme">theme</a> based on <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/documentation_options.js"></script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="../../../_static/sphinx_highlight.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

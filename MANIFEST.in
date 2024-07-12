@@ -1,3 +1,0 @@
-include versioneer.py
-recursive-include chromo/*
-include chromo/util/dssWLCparams

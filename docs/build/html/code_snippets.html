@@ -1,0 +1,386 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Code Snippets &mdash; chromo  documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+    <link rel="stylesheet" href="_static/plot_directive.css" type="text/css" />
+  
+    <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="chromo  documentation" href="index.html"/>
+        <link rel="next" title="Chromo: Physics-based Simulator of Chromatin Architecture" href="modules.html"/>
+        <link rel="prev" title="Tutorial 8: Kinked Chromatin with Sterics" href="tutorial_8_kinked_chromatin_with_sterics.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> chromo
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="abstract.html">Abstract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_structure.html">Code Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mc_sim.html">Monte Carlo Simulations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Theory</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="poly_models.html">Polymer Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="field.html">Field Theoretic Treatment of Interactions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tutorial_1_unconfined_semiflexible_homopolymer.html">1. Unconfined, Semiflexible Homopolymer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_2_confined_semiflexible_homopolymer.html">2. Confined, Semiflexible Homopolymer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_3_one_mark_chromatin.html">3. Single-Mark Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_4_two_mark_chromatin.html">4. Two-Mark Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_5_two_mark_chromatin_competitive.html">5. Two-Mark Chromatin Simulation with Competitive Binding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_6_two_step_refinement.html">6. Simulation with Coarse and Refined Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_7_kinked_chromatin.html">7. Kinked Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_8_kinked_chromatin_with_sterics.html">8. Kinked Chromatin Simulation with Sterics</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Code Snippets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#specify-reader-proteins">Specify Reader Proteins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#specify-chemical-modifications-initial-binding-states">Specify Chemical Modifications &amp; Initial Binding States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#define-polymer-or-chromatin">Define Polymer or Chromatin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#define-uniform-density-field">Define Uniform Density Field</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">chromo</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Code Snippets</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/code_snippets.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="code-snippets">
+<h1>Code Snippets<a class="headerlink" href="#code-snippets" title="Permalink to this heading">¶</a></h1>
+<p>The following code snippets demonstrate how to complete common tasks using the
+<code class="code docutils literal notranslate"><span class="pre">chromo</span></code> package.</p>
+<section id="specify-reader-proteins">
+<h2>Specify Reader Proteins<a class="headerlink" href="#specify-reader-proteins" title="Permalink to this heading">¶</a></h2>
+<p>Default properties for HP1 and PRC1 are implemented; these binders can be called
+by name.
+New reader proteins can be defined by specifying their physical properties.
+After specifying the reader proteins, the <cite>make_binder_collection</cite> method
+creates a Pandas table representing the collection of reader proteins, which is
+used to define the chromatin during a later step.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">hp1</span> <span class="o">=</span> <span class="n">chromo</span><span class="o">.</span><span class="n">binders</span><span class="o">.</span><span class="n">get_by_name</span><span class="p">(</span><span class="s1">&#39;HP1&#39;</span><span class="p">)</span>
+<span class="n">prc1</span> <span class="o">=</span> <span class="n">chromo</span><span class="o">.</span><span class="n">binders</span><span class="o">.</span><span class="n">get_by_name</span><span class="p">(</span><span class="s1">&#39;PRC1&#39;</span><span class="p">)</span>
+<span class="n">custom_binder</span> <span class="o">=</span> <span class="n">ReaderProtein</span><span class="p">(</span>
+   <span class="n">name</span><span class="o">=</span><span class="s2">&quot;new_binder&quot;</span><span class="p">,</span>
+   <span class="n">sites_per_bead</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+   <span class="n">bind_energy_mod</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+   <span class="n">bind_energy_no_mod</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+   <span class="n">interaction_energy</span><span class="o">=-</span><span class="mf">0.2</span><span class="p">,</span>
+   <span class="n">chemical_potential</span><span class="o">=-</span><span class="mf">1.5</span><span class="p">,</span>
+   <span class="n">interaction_radius</span><span class="o">=</span><span class="mi">3</span>
+<span class="p">)</span>
+<span class="n">binders</span> <span class="o">=</span> <span class="n">chromo</span><span class="o">.</span><span class="n">binders</span><span class="o">.</span><span class="n">make_binder_collection</span><span class="p">([</span><span class="n">hp1</span><span class="p">,</span> <span class="n">prc1</span><span class="p">,</span> <span class="n">custom_binder</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="specify-chemical-modifications-initial-binding-states">
+<h2>Specify Chemical Modifications &amp; Initial Binding States<a class="headerlink" href="#specify-chemical-modifications-initial-binding-states" title="Permalink to this heading">¶</a></h2>
+<p>Each reader protein requires a pattern of histone modifications dictating binding.
+These patterns can be specified directly or read from a file.
+Initial reader protein binding states may be trivially defined to match the
+chemical modifications.
+Alternatively, reader proteins may be initialized as unbound.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">H3K9me3</span> <span class="o">=</span> <span class="n">Chromatin</span><span class="o">.</span><span class="n">load_seqs</span><span class="p">([</span><span class="s2">&quot;path/to/H3K9me3/sequence&quot;</span><span class="p">])</span>
+<span class="n">H3K27me3</span> <span class="o">=</span> <span class="n">Chromatin</span><span class="o">.</span><span class="n">load_seqs</span><span class="p">([</span><span class="s2">&quot;path/to/H3K27me3/sequence&quot;</span><span class="p">])</span>
+<span class="n">custom_mod</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">H3K9me3</span><span class="p">))</span>
+<span class="n">chemical_mods</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">H3K9me3</span><span class="p">,</span> <span class="n">H3K27me3</span><span class="p">,</span> <span class="n">custom_mod</span><span class="p">))</span>
+<span class="n">states</span> <span class="o">=</span> <span class="n">chemical_mods</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">unbound</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">chemical_mods</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="define-polymer-or-chromatin">
+<h2>Define Polymer or Chromatin<a class="headerlink" href="#define-polymer-or-chromatin" title="Permalink to this heading">¶</a></h2>
+<p>Homopolymers can be instantiated with basic dimensions and an initial
+configuration.
+For example, here we define a 1000-beads stretchable, shearable wormlike chain
+homopolymer, with beads spaced by 25-units and a persistence length of
+100-units.
+The polymer is initialized along a Gaussian random walk.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">num_beads</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">bead_spacing</span> <span class="o">=</span> <span class="mi">25</span>
+<span class="n">lp</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">polymer</span> <span class="o">=</span> <span class="n">SSWLC</span><span class="o">.</span><span class="n">gaussian_walk_polymer</span><span class="p">(</span>
+   <span class="s2">&quot;poly_1&quot;</span><span class="p">,</span>
+   <span class="n">num_beads</span><span class="p">,</span>
+   <span class="n">bead_spacing</span><span class="p">,</span>
+   <span class="n">lp</span><span class="o">=</span><span class="n">lp</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>To instantiate chromatin, specify basic dimensions, histone modification
+patterns, and an initial configuration.
+The polymer below is confined to a sphere with a 900-unit radius.
+Each bead is modified at three sites, and initial reader protein binding states
+match the initial modifications.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">chromatin</span> <span class="o">=</span> <span class="n">Chromatin</span><span class="o">.</span><span class="n">confined_gaussian_walk</span><span class="p">(</span>
+    <span class="s1">&#39;Chr-1&#39;</span><span class="p">,</span>
+    <span class="n">num_beads</span><span class="p">,</span>
+    <span class="n">bead_spacing</span><span class="p">,</span>
+    <span class="n">states</span><span class="o">=</span><span class="n">states</span><span class="p">,</span>
+    <span class="n">confine_type</span><span class="o">=</span><span class="s2">&quot;Sphere&quot;</span><span class="p">,</span>
+    <span class="n">confine_length</span><span class="o">=</span><span class="mi">900</span><span class="p">,</span>
+    <span class="n">binder_names</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;hp1&#39;</span><span class="p">,</span> <span class="s1">&#39;prc1&#39;</span><span class="p">,</span> <span class="s1">&#39;custom_binder&#39;</span><span class="p">]),</span>
+    <span class="n">chemical_mods</span><span class="o">=</span><span class="n">chemical_mods</span><span class="p">,</span>
+    <span class="n">chemical_mod_names</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;H3K9me3&#39;</span><span class="p">,</span> <span class="s1">&#39;H3K27me3&#39;</span><span class="p">,</span> <span class="s1">&#39;custom_mod&#39;</span><span class="p">])</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="define-uniform-density-field">
+<h2>Define Uniform Density Field<a class="headerlink" href="#define-uniform-density-field" title="Permalink to this heading">¶</a></h2>
+<p>The density field for the polymer and its binders is instantiated as a grid of
+discrete voxels.
+The width and number of voxels in each dimension of the field must be specified.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x_width</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">y_width</span> <span class="o">=</span> <span class="n">x_width</span>
+<span class="n">z_width</span> <span class="o">=</span> <span class="n">x_width</span>
+
+<span class="n">n_bins_x</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">n_bins_y</span> <span class="o">=</span> <span class="n">n_bins_x</span>
+<span class="n">n_bins_z</span> <span class="o">=</span> <span class="n">n_bins_x</span>
+
+<span class="n">udf</span> <span class="o">=</span> <span class="n">UniformDensityField</span><span class="p">(</span>
+    <span class="n">polymers</span> <span class="o">=</span> <span class="p">[</span><span class="n">polymer</span><span class="p">],</span>
+    <span class="n">binders</span> <span class="o">=</span> <span class="n">binders</span><span class="p">,</span>
+    <span class="n">x_width</span> <span class="o">=</span> <span class="n">x_width</span><span class="p">,</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">n_bins_x</span><span class="p">,</span>
+    <span class="n">y_width</span> <span class="o">=</span> <span class="n">y_width</span><span class="p">,</span>
+    <span class="n">ny</span> <span class="o">=</span> <span class="n">n_bins_y</span><span class="p">,</span>
+    <span class="n">z_width</span> <span class="o">=</span> <span class="n">z_width</span><span class="p">,</span>
+    <span class="n">nz</span> <span class="o">=</span> <span class="n">n_bins_z</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Preparation of inputs and analysis of outputs can be completed using
+the <code class="code docutils literal notranslate"><span class="pre">chromo-analysis</span></code> package available
+<a class="reference external" href="https://github.com/JosephWakim/chromo-analysis">here</a>.</p>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="modules.html" class="btn btn-neutral float-right" title="Chromo: Physics-based Simulator of Chromatin Architecture" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tutorial_8_kinked_chromatin_with_sterics.html" class="btn btn-neutral" title="Tutorial 8: Kinked Chromatin with Sterics" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2024, Joseph Wakim, Bruno Beltran, Andrew Spakowitz.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> and ❤️  using a custom <a href="https://github.com/LinxiFan/Sphinx-theme">theme</a> based on <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/documentation_options.js"></script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="_static/sphinx_highlight.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

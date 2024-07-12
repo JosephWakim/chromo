@@ -1,0 +1,97 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="DuplicatedCode" enabled="false" level="WEAK WARNING" enabled_by_default="false">
+      <Languages>
+        <language minSize="150" name="Python" />
+      </Languages>
+    </inspection_tool>
+    <inspection_tool class="PyAttributeOutsideInitInspection" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="17">
+            <item index="0" class="java.lang.String" itemvalue="pandas" />
+            <item index="1" class="java.lang.String" itemvalue="setuptools" />
+            <item index="2" class="java.lang.String" itemvalue="numpy" />
+            <item index="3" class="java.lang.String" itemvalue="Cython" />
+            <item index="4" class="java.lang.String" itemvalue="nbsphinx" />
+            <item index="5" class="java.lang.String" itemvalue="karma_sphinx_theme" />
+            <item index="6" class="java.lang.String" itemvalue="numba" />
+            <item index="7" class="java.lang.String" itemvalue="scipy" />
+            <item index="8" class="java.lang.String" itemvalue="pytest" />
+            <item index="9" class="java.lang.String" itemvalue="scikit_learn" />
+            <item index="10" class="java.lang.String" itemvalue="sphinx_theme" />
+            <item index="11" class="java.lang.String" itemvalue="IPython" />
+            <item index="12" class="java.lang.String" itemvalue="sphinx" />
+            <item index="13" class="java.lang.String" itemvalue="sphinx_rtd_theme" />
+            <item index="14" class="java.lang.String" itemvalue="matplotlib" />
+            <item index="15" class="java.lang.String" itemvalue="bioframe" />
+            <item index="16" class="java.lang.String" itemvalue="notebook" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPep8Inspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="E741" />
+          <option value="E402" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPep8NamingInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="N802" />
+          <option value="N806" />
+          <option value="N803" />
+          <option value="N801" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyTypeCheckerInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="chromo.mc.move_funcs.chromo" />
+          <option value="chromo.polymers.*" />
+          <option value="property.*" />
+          <option value="beads" />
+          <option value="delta" />
+          <option value="eps_bend" />
+          <option value="eps_par" />
+          <option value="eps_perp" />
+          <option value="gamma" />
+          <option value="eta" />
+          <option value="eps_twist" />
+          <option value="chromo.fields.*" />
+          <option value="nbr_indices_with_trial" />
+          <option value="id" />
+          <option value="owlready2" />
+          <option value="bool.astype" />
+          <option value="dict.__setitem__" />
+          <option value="chromo.binders.Binder.chemical_potential" />
+          <option value="chromo.binders.Binder.interaction_energy" />
+          <option value="chromo.binders.Binder.cross_talk_interaction_energy" />
+          <option value="analyses.characterizations.inspect_simulations.*" />
+          <option value="pandas" />
+          <option value="numpy" />
+          <option value="simulations.examples.two_mark_factorial.matplotlib" />
+          <option value="simulations.examples.two_mark_factorial_cg_step.matplotlib" />
+          <option value="simulations.examples.two_mark_factorial_refine_step.matplotlib" />
+          <option value="analyses.cmaps.cmaps.matplotlib" />
+          <option value="analyses.cmaps.cmaps.mpl_toolkits" />
+          <option value="analyses.cmaps.contact_maps.matplotlib" />
+          <option value="analyses.cmaps.contact_maps.mpl_toolkits" />
+          <option value="sliding_nucleosome.linkers.sliding_nucleosomes" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
+      <option name="processCode" value="true" />
+      <option name="processLiterals" value="true" />
+      <option name="processComments" value="true" />
+    </inspection_tool>
+  </profile>
+</component>

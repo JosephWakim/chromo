@@ -1,0 +1,794 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>chromo.util.poly_paths &mdash; chromo  documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+    <link rel="stylesheet" href="../../../_static/plot_directive.css" type="text/css" />
+  
+    <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+        <link rel="search" title="Search" href="../../../search.html"/>
+    <link rel="top" title="chromo  documentation" href="../../../index.html"/>
+        <link rel="up" title="chromo.util" href="../util.html"/> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> chromo
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../abstract.html">Abstract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure.html">Code Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mc_sim.html">Monte Carlo Simulations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Theory</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../poly_models.html">Polymer Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../field.html">Field Theoretic Treatment of Interactions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_1_unconfined_semiflexible_homopolymer.html">1. Unconfined, Semiflexible Homopolymer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_2_confined_semiflexible_homopolymer.html">2. Confined, Semiflexible Homopolymer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_3_one_mark_chromatin.html">3. Single-Mark Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_4_two_mark_chromatin.html">4. Two-Mark Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_5_two_mark_chromatin_competitive.html">5. Two-Mark Chromatin Simulation with Competitive Binding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_6_two_step_refinement.html">6. Simulation with Coarse and Refined Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_7_kinked_chromatin.html">7. Kinked Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorial_8_kinked_chromatin_with_sterics.html">8. Kinked Chromatin Simulation with Sterics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_snippets.html">Code Snippets</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">chromo</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../util.html">chromo.util</a> &raquo;</li>
+        
+      <li>chromo.util.poly_paths</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for chromo.util.poly_paths</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Functions for specification of initial polymer paths.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">njit</span>
+
+
+<div class="viewcode-block" id="coordinates_in_x_y"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.coordinates_in_x_y">[docs]</a><span class="k">def</span> <span class="nf">coordinates_in_x_y</span><span class="p">(</span>
+    <span class="n">num_beads</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">bead_length</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">shape_func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">step_size</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find bead coordiantes about path in x, y plane w/ fixed contour length.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Get coordinates in the x, y plane which splits the path of the polymer into</span>
+<span class="sd">    segments of equal path length.</span>
+
+<span class="sd">    TODO: If we want to have variable linker lengths, the spacing of monomeric</span>
+<span class="sd">    units must be different, and this must be accounted for when selecting</span>
+<span class="sd">    x-positions of beads.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_beads : int</span>
+<span class="sd">        Number of monomer units on the polymer</span>
+<span class="sd">    bead_length : float or (N,) array_like of float</span>
+<span class="sd">        The amount of polymer path length between this bead and the next</span>
+<span class="sd">        bead. For now, a constant value is assumed (the first value if an</span>
+<span class="sd">        array is passed).</span>
+<span class="sd">    shape_func : Callable[[float], float]</span>
+<span class="sd">        Shape of the polymer where z = 0 and y = f(x)</span>
+<span class="sd">    step_size : float</span>
+<span class="sd">        Step size for numerical evaluation of contour length when</span>
+<span class="sd">        domain of the shape function used to initialize polymer</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        Coordinates of each point with path defined by `shape_func`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_beads</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_beads</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">arc_length</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="n">arc_length</span> <span class="o">&lt;</span> <span class="n">bead_length</span><span class="p">:</span>
+            <span class="n">previous_x</span> <span class="o">=</span> <span class="n">x</span>
+            <span class="n">previous_arc_length</span> <span class="o">=</span> <span class="n">arc_length</span>
+
+            <span class="n">dy_dx</span> <span class="o">=</span> <span class="n">numerical_derivative</span><span class="p">(</span><span class="n">shape_func</span><span class="p">,</span> <span class="n">previous_x</span><span class="p">,</span> <span class="n">step_size</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">+=</span> <span class="n">step_size</span>
+            <span class="n">arc_length</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">dy_dx</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_size</span>
+
+        <span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span>
+            <span class="n">bead_length</span><span class="p">,</span> <span class="p">[</span><span class="n">previous_arc_length</span><span class="p">,</span> <span class="n">arc_length</span><span class="p">],</span> <span class="p">[</span><span class="n">previous_x</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape_func</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">r</span></div>
+
+
+<div class="viewcode-block" id="coordinates_in_x_y_z"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.coordinates_in_x_y_z">[docs]</a><span class="k">def</span> <span class="nf">coordinates_in_x_y_z</span><span class="p">(</span>
+    <span class="n">num_beads</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">bead_length</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">shape_func_x</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">shape_func_y</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">shape_func_z</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">step_size</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate coordinates for 3D initialization of a polymer.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_beads : int</span>
+<span class="sd">        Number of monomer units on the polymer</span>
+<span class="sd">    bead_length : float or (N,) array_like of float</span>
+<span class="sd">        The amount of polymer path length between this bead and the next</span>
+<span class="sd">        bead. For now, a constant value is assumed (the first value if an</span>
+<span class="sd">        array is passed).</span>
+<span class="sd">    shape_func_x : Callable[[float], float]</span>
+<span class="sd">        Parametric functions to obtain the x coordinates of the path</span>
+<span class="sd">    shape_func_y : Callable[[float], float]</span>
+<span class="sd">        Parametric functions to obtain the y coordinates of the path</span>
+<span class="sd">    shape_func_z : Callable[[float], float]</span>
+<span class="sd">        Parametric functions to obtain the z coordinates of the path</span>
+<span class="sd">    step_size : float</span>
+<span class="sd">        Step size for numerical evaluation of contour length when</span>
+<span class="sd">        domain of the shape function used to initialize polymer</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        Coordinates of points with path defined by parametric shape functions</span>
+<span class="sd">    List[float]</span>
+<span class="sd">        Parameter values corresponding to (x, y, z) points obtained from shape</span>
+<span class="sd">        functions</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_beads</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">parameter_vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_beads</span><span class="p">):</span>
+        <span class="n">arc_length</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="n">arc_length</span> <span class="o">&lt;</span> <span class="n">bead_length</span><span class="p">:</span>
+            <span class="n">previous_t</span> <span class="o">=</span> <span class="n">t</span>
+            <span class="n">previous_arc_length</span> <span class="o">=</span> <span class="n">arc_length</span>
+            <span class="n">dx_dt</span> <span class="o">=</span> <span class="n">numerical_derivative</span><span class="p">(</span><span class="n">shape_func_x</span><span class="p">,</span> <span class="n">previous_t</span><span class="p">,</span> <span class="n">step_size</span><span class="p">)</span>
+            <span class="n">dy_dt</span> <span class="o">=</span> <span class="n">numerical_derivative</span><span class="p">(</span><span class="n">shape_func_y</span><span class="p">,</span> <span class="n">previous_t</span><span class="p">,</span> <span class="n">step_size</span><span class="p">)</span>
+            <span class="n">dz_dt</span> <span class="o">=</span> <span class="n">numerical_derivative</span><span class="p">(</span><span class="n">shape_func_z</span><span class="p">,</span> <span class="n">previous_t</span><span class="p">,</span> <span class="n">step_size</span><span class="p">)</span>
+            <span class="n">t</span> <span class="o">+=</span> <span class="n">step_size</span>
+            <span class="n">arc_length</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+                <span class="n">dx_dt</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">dy_dt</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">dz_dt</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="n">step_size</span>
+
+        <span class="n">t_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span>
+            <span class="n">bead_length</span><span class="p">,</span> <span class="p">[</span><span class="n">previous_arc_length</span><span class="p">,</span> <span class="n">arc_length</span><span class="p">],</span> <span class="p">[</span><span class="n">previous_t</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">parameter_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t_true</span><span class="p">)</span>
+        <span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape_func_x</span><span class="p">(</span><span class="n">t_true</span><span class="p">)</span>
+        <span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape_func_y</span><span class="p">(</span><span class="n">t_true</span><span class="p">)</span>
+        <span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape_func_z</span><span class="p">(</span><span class="n">t_true</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">r</span><span class="p">,</span> <span class="n">parameter_vals</span></div>
+
+
+<div class="viewcode-block" id="get_tangent_vals_x_y"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.get_tangent_vals_x_y">[docs]</a><span class="k">def</span> <span class="nf">get_tangent_vals_x_y</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">shape_func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">step_size</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the t3 and t2 vectors at a fixed position along shape_func.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : np.ndarray</span>
+<span class="sd">        Vector of independent variable positions at which to evaluate tangent</span>
+<span class="sd">    shape_func : Callable[[float], float]</span>
+<span class="sd">        Function defining the shape on which to obtain tangent</span>
+<span class="sd">    step_size : float</span>
+<span class="sd">        Step size to use when numerically evaluating tangent vectors</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray (N, 3)</span>
+<span class="sd">        Matrix representing t3 tangents, where rows represent x, y, z</span>
+<span class="sd">        components of tangent at each point.</span>
+<span class="sd">    np.ndarray (N, 3)</span>
+<span class="sd">        Matrix representing t2 tangents, where rows represent x, y, z</span>
+<span class="sd">        coordinates of tangent vector at each point</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">num_beads</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">t3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_beads</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_beads</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+    <span class="n">arbitrary_vec_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">arbitrary_vec_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_beads</span><span class="p">):</span>
+        <span class="n">t3_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">step_size</span><span class="p">,</span> <span class="n">numerical_derivative</span><span class="p">(</span>
+                <span class="n">shape_func</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">step_size</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="n">step_size</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">t3</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">t3_i</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">t3_i</span><span class="p">)</span>
+        <span class="n">trial_t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">t3</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">arbitrary_vec_1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">trial_t2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="n">trial_t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">t3</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">arbitrary_vec_2</span><span class="p">)</span>
+        <span class="n">t2</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">trial_t2</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">trial_t2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">t3</span><span class="p">,</span> <span class="n">t2</span></div>
+
+
+<div class="viewcode-block" id="get_tangent_vals_x_y_z"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.get_tangent_vals_x_y_z">[docs]</a><span class="k">def</span> <span class="nf">get_tangent_vals_x_y_z</span><span class="p">(</span>
+    <span class="n">t</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">shape_func_x</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">shape_func_y</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">shape_func_z</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">step_size</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">r</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the t3 and t2 vectors at a fixed position along shape_func.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t : np.ndarray</span>
+<span class="sd">        Vector of parameter values at which to evaluate the tangents</span>
+<span class="sd">    r : Optional[np.ndarray]</span>
+<span class="sd">        Coordinates of points corresponding to parameter values</span>
+<span class="sd">    shape_func_x : Callable[[float], float]</span>
+<span class="sd">        Parametric functions to obtain the x coordinates of the path</span>
+<span class="sd">    shape_func_y : Callable[[float], float]</span>
+<span class="sd">        Parametric functions to obtain the y coordinates of the path</span>
+<span class="sd">    shape_func_z : Callable[[float], float]</span>
+<span class="sd">        Parametric functions to obtain the z coordinates of the path</span>
+<span class="sd">    step_size : float</span>
+<span class="sd">        Step size to use when numerically evaluating tangent vectors</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    array_like (N, 3) of double</span>
+<span class="sd">        Matrix representing t3 tangents, where rows represent x, y, z</span>
+<span class="sd">        components of tangent at each point.</span>
+<span class="sd">    array_like (N, 3) of double</span>
+<span class="sd">        Matrix representing t2 tangents, where rows represent x, y, z</span>
+<span class="sd">        coordinates of tangent vector at each point</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="p">[</span><span class="n">shape_func_x</span><span class="p">(</span><span class="n">t_i</span><span class="p">),</span> <span class="n">shape_func_y</span><span class="p">(</span><span class="n">t_i</span><span class="p">),</span> <span class="n">shape_func_z</span><span class="p">(</span><span class="n">t_i</span><span class="p">)]</span>
+                <span class="k">for</span> <span class="n">t_i</span> <span class="ow">in</span> <span class="n">t</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="n">num_beads</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">t3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_beads</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_beads</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+    <span class="n">arbitrary_vec_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">arbitrary_vec_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_beads</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">t3_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">t3_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">shape_func_x</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">step_size</span><span class="p">)</span> <span class="o">-</span> <span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                    <span class="n">shape_func_y</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">step_size</span><span class="p">)</span> <span class="o">-</span> <span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                    <span class="n">shape_func_z</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">step_size</span><span class="p">)</span> <span class="o">-</span> <span class="n">r</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+        <span class="n">t3</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">t3_i</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">t3_i</span><span class="p">)</span>
+        <span class="n">trial_t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">t3</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">arbitrary_vec_1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">trial_t2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="n">trial_t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">t3</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">arbitrary_vec_2</span><span class="p">)</span>
+        <span class="n">t2</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">trial_t2</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">trial_t2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">t3</span><span class="p">,</span> <span class="n">t2</span></div>
+
+
+<div class="viewcode-block" id="numerical_derivative"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.numerical_derivative">[docs]</a><span class="k">def</span> <span class="nf">numerical_derivative</span><span class="p">(</span>
+    <span class="n">shape_func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">point</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">step_size</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Numerically evaluate the derivative of `shape_func` at a point.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    shape_funct : Callable[[float], float]</span>
+<span class="sd">        Function from which to evaluate derivative</span>
+<span class="sd">    point : float</span>
+<span class="sd">        Point at which to evaluate derivative</span>
+<span class="sd">    step_size : float</span>
+<span class="sd">        Step-size to apply when numerically evaluating derivative</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        Numerical approximation of derivative at point</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">shape_func</span><span class="p">(</span><span class="n">point</span> <span class="o">+</span> <span class="n">step_size</span><span class="p">)</span> <span class="o">-</span> <span class="n">shape_func</span><span class="p">(</span><span class="n">point</span><span class="p">))</span> <span class="o">/</span> <span class="n">step_size</span></div>
+
+
+<div class="viewcode-block" id="gaussian_walk"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.gaussian_walk">[docs]</a><span class="k">def</span> <span class="nf">gaussian_walk</span><span class="p">(</span>
+    <span class="n">num_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">step_sizes</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate coordinates for Gaussian random walk w/ fixed path length.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_steps : int</span>
+<span class="sd">        Number of steps in the Gaussian random walk</span>
+<span class="sd">    step_sizes : np.ndarray</span>
+<span class="sd">        Distances between subsequent points in the random walk</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray (N, 3)</span>
+<span class="sd">        Coordinates of each point in the Gaussian random walk, where rows</span>
+<span class="sd">        represent individual points and columns give x, y, z coordinates</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">((</span><span class="n">num_steps</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">magnitude_steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">magnitude_steps</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">])</span> <span class="o">*</span> <span class="n">step_sizes</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+    <span class="p">)</span>
+    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">positions</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">positions</span></div>
+
+
+<div class="viewcode-block" id="confined_gaussian_walk"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.confined_gaussian_walk">[docs]</a><span class="k">def</span> <span class="nf">confined_gaussian_walk</span><span class="p">(</span>
+    <span class="n">num_points</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">step_sizes</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">confine_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">confine_length</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate coordinates for Gaussian random walk w/ fixed path length.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_points : int</span>
+<span class="sd">        Number of points in the Gaussian random walk</span>
+<span class="sd">    step_sizes : np.ndarray (N-1,) of float</span>
+<span class="sd">        Distance between each point in the random walk</span>
+<span class="sd">    confine_type : str</span>
+<span class="sd">        Name of the confining boundary. To indicate model w/o confinement,</span>
+<span class="sd">        enter a blank string for this argument</span>
+<span class="sd">    confine_length : double</span>
+<span class="sd">        The lengthscale associated with the confining boundary. Length</span>
+<span class="sd">        representation specified in function associated w/ `confine_type`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray (N, 3)</span>
+<span class="sd">        Coordinates of each point in the Gaussian random walk, where rows</span>
+<span class="sd">        represent individual points and columns give x, y, z coordinates</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_points</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">pt_not_found</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">while</span> <span class="n">pt_not_found</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+            <span class="n">magnitude_step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+            <span class="n">point</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">magnitude_step</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_sizes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">in_confinement</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">confine_type</span><span class="p">,</span> <span class="n">confine_length</span><span class="p">):</span>
+                <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="n">point</span><span class="p">])</span>
+                <span class="n">pt_not_found</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">points</span></div>
+
+
+<div class="viewcode-block" id="confined_uniform_random_walk"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.confined_uniform_random_walk">[docs]</a><span class="k">def</span> <span class="nf">confined_uniform_random_walk</span><span class="p">(</span>
+    <span class="n">num_points</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">step_size</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">confine_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">confine_length</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate coordinates for uniform random walk w/ fixed path length.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_points : int</span>
+<span class="sd">        Number of points in the uniform random walk</span>
+<span class="sd">    step_size : float</span>
+<span class="sd">        Distance between each point in the random walk</span>
+<span class="sd">    confine_type : str</span>
+<span class="sd">        Name of the confining boundary. To indicate model w/o confinement,</span>
+<span class="sd">        enter a blank string for this argument</span>
+<span class="sd">    confine_length : double</span>
+<span class="sd">        The lengthscale associated with the confining boundary. Length</span>
+<span class="sd">        representation specified in function associated w/ `confine_type`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray (N, 3)</span>
+<span class="sd">        Coordinates of each point in the uniform random walk, where rows</span>
+<span class="sd">        represent individual points and columns give x, y, z coordinates</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_points</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">pt_not_found</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">while</span> <span class="n">pt_not_found</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+            <span class="n">magnitude_step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+            <span class="n">point</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">magnitude_step</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_size</span>
+            <span class="k">if</span> <span class="n">in_confinement</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">confine_type</span><span class="p">,</span> <span class="n">confine_length</span><span class="p">):</span>
+                <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="n">point</span><span class="p">])</span>
+                <span class="n">pt_not_found</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">points</span></div>
+
+
+<div class="viewcode-block" id="looped_confined_gaussian_walk"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.looped_confined_gaussian_walk">[docs]</a><span class="k">def</span> <span class="nf">looped_confined_gaussian_walk</span><span class="p">(</span>
+    <span class="n">num_points</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">step_size</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">confine_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">confine_length</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate looped, confined Gaussian random walk w/ fixed path length.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_points : int</span>
+<span class="sd">        Number of points in the Gaussian random walk</span>
+<span class="sd">    step_size : float</span>
+<span class="sd">        Distance between each point in the random walk</span>
+<span class="sd">    confine_type : str</span>
+<span class="sd">        Name of the confining boundary. To indicate model w/o confinement,</span>
+<span class="sd">        enter a blank string for this argument</span>
+<span class="sd">    confine_length : double</span>
+<span class="sd">        The lengthscale associated with the confining boundary. Length</span>
+<span class="sd">        representation specified in function associated w/ `confine_type`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray (N, 3)</span>
+<span class="sd">        Coordinates of each point in the Gaussian random walk, where rows</span>
+<span class="sd">        represent individual points and columns give x, y, z coordinates</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">origin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">origin</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_points</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">pt_not_found</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">origin</span><span class="p">)</span>
+        <span class="n">remaining_chain</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_points</span> <span class="o">-</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_size</span>
+
+        <span class="c1"># Free step</span>
+        <span class="k">if</span> <span class="n">remaining_chain</span> <span class="o">&gt;</span> <span class="n">dist</span> <span class="ow">or</span> <span class="n">dist</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">pt_not_found</span><span class="p">:</span>
+                <span class="n">step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+                <span class="n">magnitude_step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+                <span class="n">point</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">magnitude_step</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_size</span>
+                <span class="k">if</span> <span class="n">in_confinement</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">confine_type</span><span class="p">,</span> <span class="n">confine_length</span><span class="p">):</span>
+                    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="n">point</span><span class="p">])</span>
+                    <span class="n">pt_not_found</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Constrained step</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">magnitude_step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+            <span class="n">point</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">magnitude_step</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_size</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="n">point</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">points</span></div>
+
+
+<div class="viewcode-block" id="in_confinement"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.in_confinement">[docs]</a><span class="k">def</span> <span class="nf">in_confinement</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">confine_type</span><span class="p">,</span> <span class="n">confine_length</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a proposed point lies inside a specified confinement.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    point : array_like (1, 3)</span>
+<span class="sd">        Point for which to evaluate position in confinement</span>
+<span class="sd">    confine_type : str</span>
+<span class="sd">        Name of the confining boundary. To indicate model without confinement,</span>
+<span class="sd">        enter a blank string for this argument.</span>
+<span class="sd">    confine_length : double</span>
+<span class="sd">        The lengthscale associated with the confining boundary. What the length</span>
+<span class="sd">        represents is specified in the function associated with `confine_type`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        Indicator for whether the point lies in the confinement (True) or</span>
+<span class="sd">        outside the confinement (False)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">confine_type</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="n">confine_type</span> <span class="o">==</span> <span class="s2">&quot;Spherical&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">in_spherical_confinement</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">confine_length</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">confine_type</span> <span class="o">==</span> <span class="s2">&quot;Cubical&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">in_cubical_confinement</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">confine_length</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Confinement type not found.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="in_spherical_confinement"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.in_spherical_confinement">[docs]</a><span class="k">def</span> <span class="nf">in_spherical_confinement</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">boundary_radius</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a proposed point lies inside a spherical confinement.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    point : array_like (1, 3)</span>
+<span class="sd">        Point for which to evaluate position in confinement.</span>
+<span class="sd">    boundary_radius : double</span>
+<span class="sd">        Radial distance of the confining boundary from the origin.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        Indicator for whether the point lies in the confinement (True) or</span>
+<span class="sd">        outside the confinement (False)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">point</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">boundary_radius</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="in_cubical_confinement"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.in_cubical_confinement">[docs]</a><span class="k">def</span> <span class="nf">in_cubical_confinement</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">confine_length</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a proposed point lies inside a spherical confinement.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    point : array_like (1, 3)</span>
+<span class="sd">        Point for which to evaluate position in confinement.</span>
+<span class="sd">    confine_length : double</span>
+<span class="sd">        Edge length of cubical confimement.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        Indicator for whether the point lies in the confinement (True) or</span>
+<span class="sd">        outside the confinement (False)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">confine_length</span> <span class="o">/</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="estimate_tangents_from_coordinates"><a class="viewcode-back" href="../../../chromo.util.html#chromo.util.poly_paths.estimate_tangents_from_coordinates">[docs]</a><span class="k">def</span> <span class="nf">estimate_tangents_from_coordinates</span><span class="p">(</span>
+    <span class="n">coordinates</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimate t3 and t2 tangent vectors from array of coordinates.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coordinates : np.ndarray</span>
+<span class="sd">        Ordered coordinates representing path of a polymer</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray (N, 3)</span>
+<span class="sd">        Matrix representing t3 tangents, where rows represent x, y, z</span>
+<span class="sd">        components of tangent at each point.</span>
+<span class="sd">    np.ndarray (N, 3)</span>
+<span class="sd">        Matrix representing t2 tangents, where rows represent x, y, z</span>
+<span class="sd">        coordinates of tangent vector at each point</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">num_beads</span> <span class="o">=</span> <span class="n">coordinates</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">t3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_beads</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_beads</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+    <span class="n">first_diff</span> <span class="o">=</span> <span class="n">coordinates</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">coordinates</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">last_diff</span> <span class="o">=</span> <span class="n">coordinates</span><span class="p">[</span><span class="n">num_beads</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">coordinates</span><span class="p">[</span><span class="n">num_beads</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">t3</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">first_diff</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">first_diff</span><span class="p">)</span>
+    <span class="n">t3</span><span class="p">[</span><span class="n">num_beads</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">last_diff</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">last_diff</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_beads</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">surrounding_diff</span> <span class="o">=</span> <span class="n">coordinates</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">coordinates</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">t3</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">surrounding_diff</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">surrounding_diff</span><span class="p">)</span>
+
+    <span class="n">arbitrary_vec_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">arbitrary_vec_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_beads</span><span class="p">):</span>
+        <span class="n">trial_t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">t3</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">arbitrary_vec_1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">trial_t2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="n">trial_t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">t3</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">arbitrary_vec_2</span><span class="p">)</span>
+        <span class="n">t2</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">trial_t2</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">trial_t2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">t3</span><span class="p">,</span> <span class="n">t2</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2024, Joseph Wakim, Bruno Beltran, Andrew Spakowitz.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> and ❤️  using a custom <a href="https://github.com/LinxiFan/Sphinx-theme">theme</a> based on <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/documentation_options.js"></script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="../../../_static/sphinx_highlight.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

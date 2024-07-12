@@ -1,0 +1,373 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Chromo: Physics-Based Chromatin Simulator &mdash; chromo  documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+    <link rel="stylesheet" href="_static/plot_directive.css" type="text/css" />
+  
+    <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="chromo  documentation" href="#"/>
+        <link rel="next" title="Abstract" href="abstract.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="#" class="icon icon-home"> chromo
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="abstract.html">Abstract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_structure.html">Code Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mc_sim.html">Monte Carlo Simulations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Theory</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="poly_models.html">Polymer Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="field.html">Field Theoretic Treatment of Interactions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_1_unconfined_semiflexible_homopolymer.html">1. Unconfined, Semiflexible Homopolymer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_2_confined_semiflexible_homopolymer.html">2. Confined, Semiflexible Homopolymer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_3_one_mark_chromatin.html">3. Single-Mark Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_4_two_mark_chromatin.html">4. Two-Mark Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_5_two_mark_chromatin_competitive.html">5. Two-Mark Chromatin Simulation with Competitive Binding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_6_two_step_refinement.html">6. Simulation with Coarse and Refined Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_7_kinked_chromatin.html">7. Kinked Chromatin Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_8_kinked_chromatin_with_sterics.html">8. Kinked Chromatin Simulation with Sterics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_snippets.html">Code Snippets</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">chromo</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>Chromo: Physics-Based Chromatin Simulator</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="chromo-physics-based-chromatin-simulator">
+<h1>Chromo: Physics-Based Chromatin Simulator<a class="headerlink" href="#chromo-physics-based-chromatin-simulator" title="Permalink to this heading">¶</a></h1>
+<p>Joseph Wakim, Bruno Beltran, Andrew Spakowitz</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<section id="quickstart">
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this heading">¶</a></h2>
+<p>Chromo is publicly available on the Spakowitz Lab GitHub account in the
+<a class="reference external" href="https://github.com/SpakowitzLab/chromo">“Chromo” repository</a>.
+The software is primarily designed for Unix-like environments (Mac and Linux)
+using the Anaconda package manager.
+Follow the steps below to set up Chromo locally:</p>
+<ol class="arabic simple">
+<li><p>Clone the Chromo repository to your local machine.</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/SpakowitzLab/chromo.git
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Run <code class="code docutils literal notranslate"><span class="pre">make_all.sh</span></code> in the main directory of the repository to automatically
+set up a new conda environment named <code class="code docutils literal notranslate"><span class="pre">chromo</span></code>, install the required
+dependencies, and compile the Cython code.</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd chromo
+$ bash make_all.sh
+$ conda activate chromo
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this heading">¶</a></h2>
+<p>As a successor to <a class="reference external" href="https://wlcsim.readthedocs.io/en/latest/">WLCSIM</a>,
+Chromo is a <strong>physics-based Monte Carlo (MC) simulator</strong> developed
+by the Spakowitz Lab at Stanford University to model the
+<strong>spatial organization of chromatin</strong>.
+The simulator is implemented in <strong>Python and Cython</strong>, enabling efficient
+evaluation of MC steps.
+The software is <strong>lightweight</strong>, with coarse-grained chromosome simulations
+running on a single CPU core in under two days.
+Chromo is implemented in an <strong>object oriented manner</strong> to promote future
+adaption of the software.
+This documentation provides descriptions of the <strong>codebase</strong> and
+<strong>associated theory</strong>.
+The documentation also includes <strong>tutorials</strong> to guide users through example
+simulations.
+We encourage use and modification of the simulator for research purposes to
+model chromatin or other polymer systems.</p>
+</section>
+<section id="chromatin-simulation">
+<h2>Chromatin Simulation<a class="headerlink" href="#chromatin-simulation" title="Permalink to this heading">¶</a></h2>
+<p>For the purposes of simulation chromatin, we begin with a pattern of epigenetic
+marks that are derived from ChIP-seq data.
+These epigenetic marks determine the identities of monomers along the chromatin
+fiber.
+Epigenetic marks are preferentially bound by reader proteins, which interact
+with one-another to affect chromatin architecture.
+Using Monte Carlo simulation, we obtain thermodynamically determined chromatin
+configurations based on the cooperative binding of reader proteins to the
+chromatin fiber.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<img alt="_images/computational_methods_for_chromo_documentation_2.png" class="align-center" src="_images/computational_methods_for_chromo_documentation_2.png" />
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>Using our physics-based simulator, we can vary conditions in the nuclear
+environment to study effects on chromatin organization.
+For example, we can study the effects of reader protein concentrations and
+interactions affect chromatin compartmentalization.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<a class="reference internal image-reference" href="_images/implicit_crosstalk_for_chromo_documentation.png"><img alt="_images/implicit_crosstalk_for_chromo_documentation.png" class="align-center" src="_images/implicit_crosstalk_for_chromo_documentation.png" style="width: 400px;" /></a>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>We also use the codebase in <a class="reference external" href="https://www.pnas.org/doi/abs/10.1073/pnas.2317911121?af=R">Wakim and Spakowitz, PNAS, 2024</a>
+to resolve steric clashes between nucleosomes in chromatin fibers
+modeled with the kinked wormlike chain.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<a class="reference internal image-reference" href="_images/resolving_steric_clashes_for_chromo_documentation.png"><img alt="_images/resolving_steric_clashes_for_chromo_documentation.png" class="align-center" src="_images/resolving_steric_clashes_for_chromo_documentation.png" style="width: 600px;" /></a>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>Overall, Chromo provides an adaptable simulation framework for modeling
+chromatin in a bottom-up manner, using principles of polymer physics and
+statistical mechanics. The simulator captures the cooperative binding of
+multiple reader proteins to their respective epigenetic marks. The tool can
+be used to model chromatin at variable length scales and with varying levels
+of detail.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Use-cases of our chromatin simulator are demonstrated in the tutorials!</p>
+</div>
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+</div>
+</section>
+<section id="indices">
+<h2>Indices<a class="headerlink" href="#indices" title="Permalink to this heading">¶</a></h2>
+<p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p>
+<p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="abstract.html" class="btn btn-neutral float-right" title="Abstract" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2024, Joseph Wakim, Bruno Beltran, Andrew Spakowitz.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> and ❤️  using a custom <a href="https://github.com/LinxiFan/Sphinx-theme">theme</a> based on <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/documentation_options.js"></script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="_static/sphinx_highlight.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

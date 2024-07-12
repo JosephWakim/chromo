@@ -1,9 +1,0 @@
-{
-  "binder_name": "HP1",
-  "modification_name": "H3K9me3",
-  "modification_sequence_path": "/home/groups/ajspakow/jwakim/downloads/heart_data/H3K9me3_patterns_trimmed/ENCFF651ZTT_Chr_22_trimmed.txt",
-  "chemical_potential": -1.2,
-  "interaction_energy": -4.0,
-  "bead_spacing": 16.5,
-  "output_dir": "output_H3K9me3_only"
-}
