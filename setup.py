@@ -62,7 +62,7 @@ if __name__ == "__main__":
             "scikit_learn~=1.1.2",
             "scipy~=1.11.4",
             "setuptools~=68.0.0",
-            "notebook~=6.0.0",
+            "notebook>=6.4.12",
             "jupyter~=1.0.0",
             "pytest~=7.4.3",
             'wlcstat @ git+https://github.com/JosephWakim/wlcstat.git'
