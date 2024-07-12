@@ -268,7 +268,7 @@ def numerical_derivative(
 
 def gaussian_walk(
     num_steps: int,
-    step_size: float
+    step_sizes: np.ndarray
 ) -> np.ndarray:
     """Generate coordinates for Gaussian random walk w/ fixed path length.
 
@@ -276,8 +276,8 @@ def gaussian_walk(
     ----------
     num_steps : int
         Number of steps in the Gaussian random walk
-    step_size : float
-        Distance between each point in the random walk
+    step_sizes : np.ndarray
+        Distances between subsequent points in the random walk
 
     Returns
     -------
@@ -287,14 +287,17 @@ def gaussian_walk(
     """
     steps = np.random.standard_normal((num_steps, 3))
     magnitude_steps = np.linalg.norm(steps, axis=1)
-    return np.cumsum(
-        np.divide(steps, magnitude_steps[:, None]) * step_size, axis=0
+    positions = np.cumsum(
+        np.divide(steps, magnitude_steps[:, None]) * step_sizes[:, np.newaxis],
+        axis=0
     )
+    positions = np.vstack((np.zeros(3), positions))
+    return positions
 
 
 def confined_gaussian_walk(
     num_points: int,
-    step_size: float,
+    step_sizes: np.ndarray,
     confine_type: str,
     confine_length: float
 ) -> np.ndarray:
@@ -304,7 +307,7 @@ def confined_gaussian_walk(
     ----------
     num_points : int
         Number of points in the Gaussian random walk
-    step_size : float
+    step_sizes : np.ndarray (N-1,) of float
         Distance between each point in the random walk
     confine_type : str
         Name of the confining boundary. To indicate model w/o confinement,
@@ -325,7 +328,7 @@ def confined_gaussian_walk(
         while pt_not_found:
             step = np.random.standard_normal((1, 3))
             magnitude_step = np.linalg.norm(step)
-            point = points[i] + np.divide(step, magnitude_step) * step_size
+            point = points[i] + np.divide(step, magnitude_step) * step_sizes[i]
             if in_confinement(point, confine_type, confine_length):
                 points = np.vstack([points, point])
                 pt_not_found = False

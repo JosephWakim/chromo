@@ -14,6 +14,7 @@ cdef class PolymerBase(TransformedObject):
     cdef public beads
     cdef public long max_binders
     cdef public configuration_tracker
+    cdef public double[:] bead_length
     cdef public double lp
     cdef public long num_binders, num_beads, n_binders_p1
     cdef public long[:] all_inds
@@ -52,8 +53,8 @@ cdef class Rouse(PolymerBase):
     cdef void construct_beads(self)
 
 cdef class SSWLC(PolymerBase):
-    cdef public double delta, eps_bend, eps_par, eps_perp, gamma, eta
-    cdef public double bead_length, bead_rad
+    cdef public double[:] delta, eps_bend, eps_par, eps_perp, gamma, eta
+    cdef public double bead_rad
     cdef void construct_beads(self)
     cpdef double compute_E(self)
     cdef double compute_dE(
@@ -67,7 +68,9 @@ cdef class SSWLC(PolymerBase):
         long ind0,
         long indf,
     )
-    cdef double E_pair(self, double[:] bend, double dr_par, double[:] dr_perp)
+    cdef double E_pair(
+        self, double[:] bend, double dr_par, double[:] dr_perp, long bond_ind
+    )
     cdef double bead_pair_dE_poly_forward(
         self,
         double[:] r_0,
@@ -75,7 +78,8 @@ cdef class SSWLC(PolymerBase):
         double[:] test_r_1,
         double[:] t3_0,
         double[:] t3_1,
-        double[:] test_t3_1
+        double[:] test_t3_1,
+        long bond_ind
     )
     cdef double bead_pair_dE_poly_reverse(
         self,
@@ -84,13 +88,14 @@ cdef class SSWLC(PolymerBase):
         double[:] r_1,
         double[:] t3_0,
         double[:] test_t3_0,
-        double[:] t3_1
+        double[:] t3_1,
+        long bond_ind
     )
     cdef double binding_dE(self, long ind0, long indf, long n_inds)
     cdef double bead_binding_dE(
         self, long ind, long[:] states_trial_ind
     )
-    cpdef void _find_parameters(self, double length_bead)
+    cpdef void _find_parameters(self, double[:] bead_length)
 
 cdef class Chromatin(SSWLC):
     cdef double compute_dE(
@@ -101,9 +106,11 @@ cdef class Chromatin(SSWLC):
     )
 
 cdef class SSTWLC(SSWLC):
-    cdef public double lt, eps_twist
+    cdef public double lt
+    cdef public double[:] eps_twist
     cdef double E_pair_with_twist(
-        self, double[:] bend, double dr_par, double[:] dr_perp, double omega
+        self, double[:] bend, double dr_par, double[:] dr_perp, double omega,
+        long bond_ind
     )
     cdef double compute_dE(
         self,
@@ -121,7 +128,8 @@ cdef class SSTWLC(SSWLC):
         double[:] test_t3_1,
         double[:] t2_0,
         double[:] t2_1,
-        double[:] test_t2_1
+        double[:] test_t2_1,
+        long bond_ind
     )
     cdef double bead_pair_dE_poly_reverse_with_twist(
         self,
@@ -133,13 +141,50 @@ cdef class SSTWLC(SSWLC):
         double[:] t3_1,
         double[:] t2_0,
         double[:] test_t2_0,
-        double[:] t2_1
+        double[:] t2_1,
+        long bond_ind
     )
+    cpdef double compute_E_no_twist(self)
 
 cdef class LoopedSSTWLC(SSTWLC):
     pass
+
+cdef class DetailedChromatin(SSTWLC):
+    cdef public double omega_enter, omega_exit, bp_wrap, phi
+    cdef void construct_beads(self)
+    cdef double continuous_dE_poly(
+            self,
+            long ind0,
+            long indf,
+    )
+
+cdef class DetailedChromatinWithSterics(DetailedChromatin):
+    cdef public binders
+    cdef public double excluded_distance, V0
+    cdef public double[:, ::1] distances, distances_trial
+    cpdef double evaluate_binder_interactions(self)
+    cpdef double get_E_bind(self)
+    cpdef void get_distances(self)
+    cpdef long check_steric_clashes(self, double[:, ::1] distances)
+    cpdef bint is_field_active(self)
+    cpdef double compute_dE(
+        self,
+        str move_name,
+        long[:] inds,
+        long n_inds
+    )
+    cpdef double compute_E(self)
+    cpdef dict compute_E_detailed(self)
+    cpdef dict compute_E_detailed_reverse(self)
+    cpdef void get_delta_distances(self, long ind0, long indf)
+    cpdef double eval_delta_steric_clashes(self, long ind0, long indf)
+    cpdef double eval_E_steric_clashes(self)
+
 
 cpdef double sin_func(double x)
 cpdef double helix_parametric_x(double t)
 cpdef double helix_parametric_y(double t)
 cpdef double helix_parametric_z(double t)
+cpdef double compute_twist_angle_omega(
+        double[:] t2_0, double[:] t3_0, double[:] t2_1, double[:] t3_1
+    )

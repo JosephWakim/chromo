@@ -419,3 +419,50 @@ def specific_moves(
         controllers[i].move.num_per_cycle = 1
 
     return controllers
+
+
+def only_binding_move(
+    log_dir: str,
+    bead_amp_bounds: Dict[str, Tuple[float, float]],
+    move_amp_bounds: Dict[str, Tuple[float, float]],
+    controller: Optional[Controller] = NoControl
+) -> List[Controller]:
+    """Generate list containing controller for the binding move (single poly).
+
+    Parameters
+    ----------
+    log_dir : str
+        Path to the directory in which to save log files
+    bead_amp_bounds : Dict[str, Tuple[float, float]]
+        Dictionary of bead selection amplitude bounds where keys specify the
+        name of the MC move and the values specify the selection amplitude
+        bounds for the move in the form (lower bound, upper bound)
+    move_amp_bounds : Dict[str, Tuple[float, float]]
+        Dictionary of maximum move amplitude bounds where keys specify the
+        name of the MC move and the values specify the move amplitude bounds
+        for the move in the form (lower bound, upper bound)
+    controller : Optional[Controller]
+        Bead and move amplitude controller (default = NoControl)
+
+    Returns
+    -------
+    List of controllers for all adaptable MC moves.
+    """
+    controllers = [
+        controller(
+            mv.MCAdapter(
+                str(log_dir) + '/acceptance_trackers',
+                move.__name__ + "_snap_",
+                move,
+                moves_in_average=20,
+                init_amp_bead=bead_amp_bounds[move.__name__][0],
+                init_amp_move=move_amp_bounds[move.__name__][0]
+            ),
+            bead_amp_bounds=bead_amp_bounds[move.__name__],
+            move_amp_bounds=move_amp_bounds[move.__name__]
+        ) for move in [
+            mv.change_binding_state
+        ]
+    ]
+    controllers[0].move.num_per_cycle = 5
+    return controllers

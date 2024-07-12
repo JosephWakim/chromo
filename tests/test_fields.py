@@ -14,7 +14,7 @@ def test_uniform_density_field_roundtrip():
     binders = chromo.binders.make_binder_collection(binders)
 
     p = Chromatin.straight_line_in_x(
-        'Chr-1', 10, 1, states=np.zeros((10, 1), dtype=int),
+        'Chr-1', np.ones(10), states=np.zeros((10, 1), dtype=int),
         binder_names=np.array(['HP1']),
         chemical_mods=np.zeros((10, 1), dtype=int),
         chemical_mod_names=np.array(['H3K9me3'])
@@ -44,7 +44,7 @@ def test_uniform_density_field_roundtrip():
     # should also error if the poly/binder has the wrong name
     with pytest.raises(ValueError):
         p2 = Chromatin.straight_line_in_x(
-            'Chr-1', 10, 1, states=np.zeros((10,)),
+            'Chr-1', np.ones(10), states=np.zeros((10,)),
             binder_names=np.array(['HP1'])
         )
         p2.name = "different"

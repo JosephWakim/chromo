@@ -446,7 +446,9 @@ def get_cg_chromatin(
         chem_mods_cg = get_majority_state_in_interval(
             polymer.chemical_mods, intervals
         )
-    bead_length_cg = polymer.bead_length
+    # NOTE: Currently, the code accommodates a single linker length
+    # TODO: Adjust the line below to account for variable linker lengths
+    bead_length_cg = np.ones(len(r_cg)-1) * polymer.bead_length[0]
     bead_rad_cg = polymer.bead_rad
 
     # Scale the radial position of the beads inwards based on `cg_factor`
@@ -566,7 +568,7 @@ def get_refined_intervals(
     num_steps = {0: seg_half_1}
     for i in range(1, num_beads_cg-1):
         num_steps[i] = seg_size
-    num_steps[num_beads_cg-1] = seg_half_2
+    num_steps[num_beads_cg-1] = seg_half_2 - 1
 
     start_end = {0: (np.asarray([np.nan, np.nan, np.nan]), cg_r[0, :])}
     for i in range(1, num_beads_cg):
@@ -787,11 +789,13 @@ def get_refined_path(
         # First and last segments are free ends
         if ind == 0:
             seg_path = np.flip(gaussian_walk_from_point(
-                bounds[1], num_steps[ind], bead_spacing
+                bounds[1], num_steps[ind],
+                np.array([bead_spacing] * num_steps[ind])
             ), axis=0)[:num_steps[ind]]
         elif ind == num_beads_cg:
             seg_path = gaussian_walk_from_point(
-                bounds[0], num_steps[ind], bead_spacing
+                bounds[0], num_steps[ind],
+                np.array([bead_spacing] * num_steps[ind])
             )
         # Intermediate segments have constrained points
         else:
@@ -1045,9 +1049,10 @@ def refine_chromatin(
     """
     num_beads_cg = len(polymer_cg.r)
     scaling = (num_beads_refined / num_beads_cg)**(1/3)
-    bead_spacing_scaled_inward = bead_spacing / scaling
+    bead_spacing_scaled_inward = \
+        np.ones(num_beads_cg-1) * bead_spacing / scaling
     r_refine = get_refined_path(
-        polymer_cg.r, num_beads_refined, bead_spacing_scaled_inward
+        polymer_cg.r, num_beads_refined, bead_spacing_scaled_inward[0]
     )
     t3_refine, t2_refine = get_refined_orientations(
         polymer_cg.t3, num_beads_refined
@@ -1059,10 +1064,14 @@ def refine_chromatin(
     # Scale the radial position of the beads outward based on `cg_factor`
     r_refine *= scaling
 
+    # NOTE: Currently, the code accommodates a single linker length
+    # TODO: Adjust the line below to account for variable linker lengths
+    bead_spacing_refine = np.ones(len(r_refine)-1) * bead_spacing
+
     polymer = poly.Chromatin(
         name=name_refine,
         r=r_refine,
-        bead_length=bead_spacing,
+        bead_length=bead_spacing_refine,
         bead_rad=polymer_cg.bead_rad,
         t3=t3_refine,
         t2=t2_refine,
@@ -1092,7 +1101,8 @@ def refine_chromatin(
         )
         for _ in range(binding_equilibration):
             mc_step(
-                binding_move[0].move, polymer, udf.binders, udf, active_field=1
+                binding_move[0].move, polymer, udf.binders, udf, active_field=1,
+                update_distances=0
             )
     return polymer, udf
 

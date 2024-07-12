@@ -1,0 +1,11 @@
+{
+  "modification_sequence_path_1": "/home/groups/ajspakow/jwakim/downloads/heart_data/H3K9me3_patterns_trimmed/ENCFF651ZTT_Chr_22_trimmed.txt",
+  "modification_sequence_path_2": "/home/groups/ajspakow/jwakim/downloads/heart_data/H3K27me3_patterns_trimmed/ENCFF470ECE_Chr_22_trimmed.txt",
+  "chemical_potential_1": -1.2,
+  "chemical_potential_2": -1.2,
+  "self_interaction_energy_1": -4.0,
+  "self_interaction_energy_2": -4.0,
+  "cross_interaction_energy": 0.0,
+  "bead_spacing": 16.5,
+  "output_dir": "output_two_mark_noncoop"
+}

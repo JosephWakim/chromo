@@ -29,6 +29,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Simulation outputs
+output*
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -181,3 +184,19 @@ docs/build*
 # them in the github repo.
 *.cpp
 *.html
+
+# Old examples (to keep examples in the codebase clean)
+simulations/old/
+
+# Jobs files
+jobs/
+jobs*/
+
+# Test plots
+tests/plots/*
+
+# Test outputs
+tests/test_output/*
+
+# iCloud references
+*.icloud

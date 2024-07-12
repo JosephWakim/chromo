@@ -9,6 +9,8 @@ from typing import (Sequence, Optional, List)
 import numpy as np
 
 # Custom Modules
+from .util.nucleo_geom import \
+    get_exiting_orientations, LENGTH_BP, consts_dict, get_r
 from .binders import Binder, get_by_name
 from .util import linalg as la
 from .util.gjk import gjk_collision
@@ -157,8 +159,34 @@ class GhostBead(Bead):
         print(self.t2)
 
 
+def get_verticies_rot_mat(current_vec, target_vec, fulcrum):
+    """Rotate verticies defined relative to `current_vec`.
+
+    Parameters
+    ----------
+    current_vec : array_like (3,) of double
+        Current vector relative to which verticies are defined
+    target_vec : array_like (3,) of double
+        Target vector relative to which verticies should be defined
+    fulcrum : array_like (3,) of double
+        Point about which rotation will take place
+
+    Returns
+    -------
+    array_like (4, 4) of double
+        Homogeneous rotation matrix with which to rotate verticies
+    """
+    axis = np.cross(current_vec, target_vec)
+    axis = axis / np.linalg.norm(axis)
+    angle = np.arccos(
+        np.dot(current_vec, target_vec) /
+        (np.linalg.norm(current_vec) * np.linalg.norm(target_vec))
+    )
+    return la.return_arbitrary_axis_rotation(axis, fulcrum, angle)
+
+
 class Prism(Bead):
-    """Class representation of prism-shaped monomer, like a detailed nucleosome.
+    """Class representation of prism-shaped monomer, enabling sterics.
 
     Notes
     -----
@@ -183,7 +211,7 @@ class Prism(Bead):
         vertices: np.ndarray, states: Optional[np.ndarray] = None,
         binder_names: Optional[Sequence[str]] = None
     ):
-        """Initialize detailed nucleosome object.
+        """Initialize prism object.
 
         Parameters
         ----------
@@ -256,7 +284,7 @@ class Prism(Bead):
         Returns
         -------
         Prism
-            Instance of a detailed nucleosome matching included specifications
+            Instance of a prism matching included specifications
         """
         verticies = la.get_prism_verticies(num_sides, width, height)
         return cls(
@@ -327,40 +355,15 @@ class Prism(Bead):
 
         x_axis = np.array([1, 0, 0])
         if not np.allclose(x_axis, self.t3):
-            rot_mat = self.get_verticies_rot_mat(x_axis, self.t3, self.r)
+            rot_mat = get_verticies_rot_mat(x_axis, self.t3, self.r)
             verticies = rot_mat @ verticies
 
         z_axis = np.array([0, 0, 1])
         if not np.allclose(z_axis, self.t2):
-            rot_mat = self.get_verticies_rot_mat(z_axis, self.t2, self.r)
+            rot_mat = get_verticies_rot_mat(z_axis, self.t2, self.r)
             verticies = rot_mat @ verticies
 
         return verticies.T[:, 0:3]
-
-    def get_verticies_rot_mat(self, current_vec, target_vec, fulcrum):
-        """Rotate verticies defined relative to `current_vec`.
-
-        Parameters
-        ----------
-        current_vec : array_like (3,) of double
-            Current vector relative to which verticies are defined
-        target_vec : array_like (3,) of double
-            Target vector relative to which verticies should be defined
-        fulcrum : array_like (3,) of double
-            Point about which rotation will take place
-
-        Returns
-        -------
-        array_like (4, 4) of double
-            Homogeneous rotation matrix with which to rotate verticies
-        """
-        axis = np.cross(current_vec, target_vec)
-        axis = axis / np.linalg.norm(axis)
-        angle = np.arccos(
-            np.dot(current_vec, target_vec) /
-            (np.linalg.norm(current_vec) * np.linalg.norm(target_vec))
-        )
-        return la.return_arbitrary_axis_rotation(axis, fulcrum, angle)
 
 
 class Nucleosome(Bead):
@@ -372,8 +375,6 @@ class Nucleosome(Bead):
 
     Attributes
     ----------
-    bead_length : double
-        Spacing between the nucleosome and its neighbor
     rad : double
         Radius of spherical excluded volume around nucleosome
     vol : double
@@ -382,8 +383,7 @@ class Nucleosome(Bead):
 
     def __init__(
         self, id_: int, r: np.ndarray, *, t3: np.ndarray, t2: np.ndarray,
-        bead_length: float, rad: Optional[float] = 5,
-        states: Optional[np.ndarray] = None,
+        rad: Optional[float] = 5, states: Optional[np.ndarray] = None,
         binder_names: Optional[Sequence[str]] = None
     ):
         """Initialize nucleosome object.
@@ -400,8 +400,6 @@ class Nucleosome(Bead):
             Tangent vector orthogonal to `t3` defining orientation of
             nucleosome; a third orthogonal tangent vector can be obtained
             from the cross product of `t2` and `t3`
-        bead_length : float
-            Spacing between the nucleosome and its neighbor
         rad : Optional[float]
             Radius of spherical excluded volume around nucleosome in simulation
             units of distance; default is 5
@@ -413,7 +411,6 @@ class Nucleosome(Bead):
             are how the properties of the binders are loaded, default = None
         """
         super(Nucleosome, self).__init__(id_, r, t3, t2, states, binder_names)
-        self.bead_length = bead_length
         self.rad = rad
         self.vol = (4/3) * np.pi * rad ** 3
 
@@ -446,3 +443,132 @@ class Nucleosome(Bead):
         print(self.t3)
         print("t2 Orientation: ")
         print(self.t2)
+
+
+class DetailedNucleosome(Nucleosome):
+    """A nucleosome with fixed entry/exit positions and orientations.
+
+    Notes
+    -----
+    The entry and exit positions and orientations are defined relative to the
+    position and t3/t2 vectors of the nucleosome. We assume at this stage that
+    the relative entry and exit positions and orientations are fixed for all
+    nucleosomes.
+
+    The nucleosome is defined such that the orientation of the entering DNA is
+    fixed by the t3 orientation. The orientation of the exiting DNA is dictated
+    by the amount of DNA wrapping around the nucleosome. This class includes
+    methods that return the positions and orientations for entering and
+    exiting DNA strands based on the current position and orientation of the
+    nucleosome.
+    """
+
+    def __init__(
+        self, id_: int, r: np.ndarray, *, t3: np.ndarray, t2: np.ndarray,
+        bp_wrap: int, states: Optional[np.ndarray] = None,
+        binder_names: Optional[Sequence[str]] = None
+    ):
+        """Initialize detailed nucleosome object.
+
+        Notes
+        -----
+        Entering DNA must perfectly align with the tangent of the nucleosome.
+
+        Parameters
+        ----------
+        see documentation for `Nucleosome` class
+
+        bp_wrap : int
+            Number of base pairs wrapped around nucleosome
+        """
+        rad = consts_dict["R"]
+        super(DetailedNucleosome, self).__init__(
+            id_, r, t3=t3, t2=t2, rad=rad,
+            states=states, binder_names=binder_names
+        )
+        self.bp_wrap = bp_wrap
+        self.length_wrap = (bp_wrap-1) * LENGTH_BP
+
+        # Specify local reference frame
+        self.t3_local = np.array([
+            0,
+            2 * np.pi * rad / consts_dict["Lt"],
+            consts_dict["h"] / consts_dict["Lt"]
+        ])
+        self.t2_local = np.array([
+            0,
+            -consts_dict["h"] / consts_dict["Lt"],
+            2 * np.pi * rad / consts_dict["Lt"]
+        ])
+        self.r_enter_local = np.array([
+            rad,
+            0,
+            -(consts_dict["h"] * consts_dict["s"] / consts_dict["Lt"]) / 2
+        ])
+        self.r_exit_local = get_r(self.length_wrap, consts_dict)
+
+        # Get normalized positions
+        self.r_enter_local_norm = np.linalg.norm(self.r_enter_local)
+        self.r_exit_local_norm = np.linalg.norm(self.r_exit_local)
+        self.r_enter_local_unit = self.r_enter_local / self.r_enter_local_norm
+        self.r_exit_local_unit = self.r_exit_local / self.r_exit_local_norm
+
+        # Update configuration
+        self.update_configuration(self.r, self.t3, self.t2)
+
+    def get_entry_exit_positions(self):
+        """Get entry and exit positions of DNA in the global reference frame.
+        """
+        self.r_enter = \
+            np.dot(self.R_local_to_global, self.r_enter_local_unit) \
+            * self.r_enter_local_norm + np.asarray(self.r)
+        self.r_exit = \
+            np.dot(self.R_local_to_global, self.r_exit_local_unit) \
+            * self.r_exit_local_norm + np.asarray(self.r)
+
+    def get_entry_exit_orientations(self):
+        """Get entry and exit orientations of DNA in global reference frame.
+        """
+        t3_exit, t2_exit, t1_exit = get_exiting_orientations(
+            self.length_wrap, self.t3, self.t2, self.t1, consts_dict)
+        return t3_exit, t2_exit, t1_exit
+
+    def update_configuration(self, r, t3, t2):
+        """Update the position and orientations of the nucleosome.
+
+        Parameters
+        ----------
+        r : np.ndarray (3,) of float
+            Position of nucleosome in global reference frame
+        t3, t2 : np.ndarray (3,) of float
+            Orthogonal unit vectors defining the orientation of the nucleosome
+            in the global reference frame.
+
+        Returns
+        -------
+        r_enter : np.ndarray (3,) of float
+            Entry position of DNA defined in global reference frame
+        r_exit : np.ndarray (3,) of float
+            Exit position of DNA defined in global reference frame
+        t3 : np.ndarray (3,) of float
+            t3 tangent of entering DNA in global reference frame
+        t3_exit : np.ndarray (3,) of float
+            t3 tangent of exiting DNA in global reference frame
+        t2 : np.ndarray (3,) of float
+            t2 tangent of entering DNA in global reference frame
+        t2_exit : np.ndarray (3,) of float
+            t2 tangent of exiting DNA in global reference frame
+        """
+        # Update user-specified geometry
+        self.r = r
+        self.t3 = t3
+        self.t2 = t2
+        self.t1 = np.cross(self.t2, self.t3)
+        # Compute the rotation matrix that rotates local to global coordinates
+        self.R_local_to_global = la.get_rotation_matrix(
+            self.t3_local, self.t2_local, self.t3, self.t2
+        )
+        # Compute configuration in a global coordinate system
+        self.get_entry_exit_positions()
+        t3_exit, t2_exit, t1_exit = self.get_entry_exit_orientations()
+        return self.r_enter, self.r_exit, self.t3, t3_exit, self.t2, t2_exit

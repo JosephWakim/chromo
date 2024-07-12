@@ -1,22 +1,39 @@
-"""Run full chromosome simulation initialized to a coarse-grained configuration.
+"""Run the refinement step of a simulation with sequential coarse-graining.
 
-Author:     Joseph Wakim
-Group:      Spakowitz Lab @ Stanford
-Date:       September 13, 2022
+By:     Joseph Wakim
+Group:  Spakowitz Lab @ Stanford
+Date:   June 10, 2024
 
-Usage:      `python two_mark_refine.py <SIM_OUT_PATH> <SIM_ID> <REFINE_FACTOR> <OPTIONAL_RANDOM_SEED>`
+Usage:  python two_mark_refine.py CONFIG_PATH
+where:  CONFIG_PATH provides the path to a JSON configuration file that
+        includes the following key-value pairs:
 
-...where `<SIM_OUT_PATH>` is the path to the output directory of the simulation,
-`<SIM_ID>` denotes the integer simulation index of the coarse-grained polymer
-model, `<REFINE_FACTOR>` denotes the factor increase in beads in the refined
-model, and <OPTIONAL_RANDOM_SEED> provides an optional random seed.
+            1. CG_output: path to the output directory for the SINGLE
+                coarse-grained simulation
+            2. CG_config_file_name : name of the configuration file in the
+                coarse-grained output directory
+            3. modification_sequence_path_1 : path to a file containing the
+                full-resolution modification sequence for the first mark
+            4. modification_sequence_path_2 : path to a file containing the
+                full-resolution modification sequence for the second mark
+            5. output_dir (optional) : Path to the new output directory for ALL
+                refined simulations. If the output directory does not exist, it
+                will be created. The output directory will be set to
+                "output_refined" if not specified in the configuration file.
+            6. random_seed (optional) : If specified, a random seed will be
+                set accordingly. If not specified, a new random seed will be
+                generated.
+            7. refine_ratio (optional) : Number of refined beads per
+                coarse-grained bead. If not specified, a default value of 10
+                will be used, indicating that each coarse grained bead
+                represents 10 refined beads.
 
-The objective of this file is to enable multiple stages of simulation with
-progressively increasing levels of refinement. Before this file, the simulator
-was designed to accomodate two stages: a single coarse-grained stage and a
-single refined stage. This setup provides more flexibility.
+Notes:  There is no simulated annealing performed during the refinement step.
+        As currently implemented, the refinement step only handles uniform
+        linker lengths.
 """
 
+# Import Modules
 import os
 import sys
 from inspect import getmembers, isfunction
@@ -40,38 +57,40 @@ from chromo.fields import UniformDensityField
 import chromo.util.rediscretize as rd
 import chromo.util.mu_schedules as ms
 
+# Load simulation parameters from config file
+config_file_path = sys.argv[1]
+with open(config_file_path, "r") as config_file:
+    config = json.load(config_file)
+required_keys = [
+    "CG_output",
+    "CG_config_file_name",
+    "modification_sequence_path_1",
+    "modification_sequence_path_2",
+]
+for key in required_keys:
+    assert key in config.keys(), f"Missing required key: {key}"
+
 # Set the random seed
-if len(sys.argv) == 5:
-    random_seed = int(sys.argv[4])
+if "random_seed" in config:
+    random_seed = config["random_seed"]
 else:
     random_seed = np.random.randint(0, 1E5)
 np.random.seed(random_seed)
 
-# Store details on simulation
-path_to_run_script = os.path.abspath(__file__)
-run_command = f"python {' '.join(sys.argv)}"
-root_dir = "/".join(os.path.abspath(__file__).split("/")[:-3])
+# Load the refinement ratio
+if "refine_ratio" in config:
+    refine_ratio = config["refine_ratio"]
+else:
+    refine_ratio = 10
 
 # Load coarse-grained simulation
-sim_out_path = sys.argv[1]
-sim_id = int(sys.argv[2])
+cg_dir = config["CG_output"]
+binder_path = os.path.join(cg_dir, "binders")
+udf_path = os.path.join(cg_dir, "UniformDensityField")
+
+# Load the latest snapshot from the coarse-grained simulation
+files = os.listdir(cg_dir)
 polymer_prefix = "Chr"
-output_dir = f"{sim_out_path}/sim_{sim_id}"
-binder_path = f"{output_dir}/binders"
-udf_path = f"{output_dir}/UniformDensityField"
-
-# Specify confinement
-confine_type = "Spherical"
-confine_length = 900
-
-# Specify simulation
-true_num_beads = 393216
-bead_spacing = 16.5
-num_snapshots = 200
-mc_steps_per_snapshot = 5000
-
-# Load the latest snapshot from coarse-grained simulation
-files = os.listdir(output_dir)
 files = [
     file for file in files
     if file.endswith(".csv") and file.startswith(polymer_prefix)
@@ -79,46 +98,51 @@ files = [
 snaps = [int(file.split(".")[0].split("-")[-1]) for file in files]
 files = [file for _, file in sorted(zip(snaps, files))]
 latest_snap = files[-1]
-latest_snap_path = f"{output_dir}/{latest_snap}"
+latest_snap_path = os.path.join(cg_dir, latest_snap)
 
-# Create coarse-grained polymer
+# Create a coarse-grained polymer
 p_cg = Chromatin.from_file(latest_snap_path, name="Chr_CG")
 num_beads_cg = p_cg.num_beads
-refine_factor = float(sys.argv[3])
-new_cg_factor = int(np.floor(true_num_beads / num_beads_cg) / refine_factor)
-num_beads = int(true_num_beads / new_cg_factor)
+num_beads = int(num_beads_cg * refine_ratio)
+
+# Bead density is defined by MacPherson et al. 2018
+bead_density = 393216 / (4 / 3 * np.pi * 900 ** 3)
+
+# Specify confinement
+confine_type = "Spherical"
+confine_length = (num_beads / bead_density / (4 / 3 * np.pi)) ** (1 / 3)
 
 # Specify chemical modifications
 chem_mods_path = np.array([
-    "chromo/chemical_mods/HNCFF683HCZ_H3K9me3_methyl.txt",
-    "chromo/chemical_mods/ENCFF919DOR_H3K27me3_methyl.txt"
+    config["modification_sequence_path_1"],
+    config["modification_sequence_path_2"]
 ])
-chem_mod_paths_abs = [f"{root_dir}/{path}" for path in chem_mods_path]
-true_chemical_mods = Chromatin.load_seqs(chem_mods_path)[:true_num_beads]
+chemical_mods = Chromatin.load_seqs(chem_mods_path)[:num_beads]
 
-intervals = rd.get_cg_bead_intervals(true_num_beads, cg_factor=new_cg_factor)
-chemical_mods = rd.get_majority_state_in_interval(
-    true_chemical_mods, intervals
-)[:num_beads]
+# Load the coarse-grained simulation parameters
+cg_config_path = os.path.join(
+    config["CG_output"], config["CG_config_file_name"]
+)
+with open(cg_config_path, "r") as cg_config_file:
+    config_cg = json.load(cg_config_file)
 
-# Create binders
-hp1 = chromo.binders.get_by_name("HP1")
-prc1 = chromo.binders.get_by_name("PRC1")
-binders_list = [hp1, prc1]
-df_binders = pd.read_csv(binder_path, index_col="name")
-cp_HP1 = df_binders.loc["HP1", "chemical_potential"]
-cp_PRC1 = df_binders.loc["PRC1", "chemical_potential"]
-self_interact_HP1 = df_binders.loc["HP1", "interaction_energy"]
-self_interact_PRC1 = df_binders.loc["PRC1", "interaction_energy"]
-cross_interact = json.loads(
-    df_binders.loc["HP1", "cross_talk_interaction_energy"].replace("'", "\"")
-)["PRC1"]
-binders_list[0].chemical_potential = float(cp_HP1)
-binders_list[1].chemical_potential = float(cp_PRC1)
-binders_list[0].interaction_energy = float(self_interact_HP1)
-binders_list[1].interaction_energy = float(self_interact_PRC1)
-binders_list[0].cross_talk_interaction_energy["PRC1"] = float(cross_interact)
-binders = chromo.binders.make_binder_collection(binders_list)
+# Load binder properties
+# Two mark simulations are hard coded for binders HP1 and PRC1
+# Properties of these marks can be adjusted
+binder_1 = chromo.binders.get_by_name("HP1")
+binder_2 = chromo.binders.get_by_name("PRC1")
+binders = [binder_1, binder_2]
+
+# Update the binder parameters
+binders[0].chemical_potential = config_cg["chemical_potential_1"]
+binders[1].chemical_potential = config_cg["chemical_potential_2"]
+binders[0].interaction_energy = config_cg["self_interaction_energy_1"]
+binders[1].interaction_energy = config_cg["self_interaction_energy_2"]
+binders[0].cross_talk_interaction_energy["PRC1"] = \
+    config_cg["cross_interaction_energy"]
+
+# Create the binder collection
+binders = chromo.binders.make_binder_collection(binders)
 
 # Load field parameters from coarse-grained simulation
 field_params = pd.read_csv(
@@ -134,7 +158,7 @@ confine_type_cg = field_params.loc["confine_type", "Value"]
 confine_length_cg = float(field_params.loc["confine_length", "Value"])
 chi = float(field_params.loc["chi", "Value"])
 assume_fully_accessible = (
-    field_params.loc["assume_fully_accessible", "Value"] == "True"
+        field_params.loc["assume_fully_accessible", "Value"] == "True"
 )
 fast_field = int(field_params.loc["fast_field", "Value"] == "True")
 
@@ -146,8 +170,18 @@ udf_cg = UniformDensityField(
     fast_field=fast_field
 )
 
+# Store details on simulation
+path_to_run_script = os.path.abspath(__file__)
+run_command = f"python {' '.join(sys.argv)}"
+root_dir = "/".join(path_to_run_script.split("/")[:-3])
+if "output_dir" in config:
+    output_dir = config["output_dir"]
+else:
+    output_dir = os.path.join(root_dir, "output_refined")
+
 # Refine the polymer
 n_bind_eq = 1000000
+bead_spacing = 16.5  # Currently, only uniform linker lengths are supported
 p_refine, udf_refine = rd.refine_chromatin(
     polymer_cg=p_cg,
     num_beads_refined=num_beads,
@@ -156,19 +190,15 @@ p_refine, udf_refine = rd.refine_chromatin(
     udf_cg=udf_cg,
     binding_equilibration=n_bind_eq,
     name_refine="Chr_refine",
-    output_dir="output"
+    output_dir=output_dir
 )
 
 # Specify move and bead amplitudes
 amp_bead_bounds, amp_move_bounds = mc.get_amplitude_bounds([p_refine])
 
-# Specify simulated annealing schedule
-schedules = [func[0] for func in getmembers(ms, isfunction)]
-select_schedule = "linear_step_for_negative_cp_mild"
-mu_schedules = [
-    ms.Schedule(getattr(ms, func_name)) for func_name in schedules
-]
-mu_schedules = [sch for sch in mu_schedules if sch.name == select_schedule]
+# Specify duration of simulation
+num_snapshots = 200
+mc_steps_per_snapshot = 5000
 
 # Run the refined simulation
 polymers_refined = mc.polymer_in_field(
@@ -179,10 +209,9 @@ polymers_refined = mc.polymer_in_field(
     num_snapshots,
     amp_bead_bounds,
     amp_move_bounds,
-    output_dir='output',
-    mu_schedule=mu_schedules[0],
+    output_dir=output_dir,
     random_seed=random_seed,
     path_to_run_script=path_to_run_script,
-    path_to_chem_mods=chem_mod_paths_abs,
+    path_to_chem_mods=chem_mods_path,
     run_command=run_command
 )

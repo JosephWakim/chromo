@@ -458,3 +458,118 @@ cdef long alt_mod(long x, long n):
     filled = <long>floor(x / n)
     remainder = x - filled * n
     return remainder
+
+
+def angle_between_vectors(v, w):
+    """Angle between two vectors, v and w, returned in radians.
+    """
+    # Calculate the dot product of v and w
+    dot_product = np.dot(v, w)
+    # Calculate the magnitudes of v and w
+    magnitude_v = np.linalg.norm(v)
+    magnitude_w = np.linalg.norm(w)
+    # Calculate the cosine of the angle
+    cos_theta = dot_product / (magnitude_v * magnitude_w)
+    # Use arccosine to find the angle in radians
+    theta_radians = np.arccos(np.clip(cos_theta, -1.0, 1.0))
+    return theta_radians
+
+
+def rotation_matrix_from_vectors(vec1, vec2):
+    """Find the rotation matrix that aligns vec1 to vec2
+
+    Notes
+    -----
+    This method is based on the following Stack Overflow answer:
+    https://stackoverflow.com/a/67767180 from the forum: "Calculate rotation
+    matrix to align two vectors in 3D space."
+
+    Parameters
+    ----------
+    vec1 : array_like (3,) of double
+        A 3D "source" vector
+    vec2 : array_like (3,) of double
+        A 3D "destination" vector
+
+    Returns
+    -------
+    array_like (3, 3) of double
+        A 3x3 rotation matrix that rotates vec1 to vec2
+    """
+    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), \
+           (vec2 / np.linalg.norm(vec2)).reshape(3)
+    v = np.cross(a, b)
+    if any(v): # if not all zeros then
+        c = np.dot(a, b)
+        s = np.linalg.norm(v)
+        kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+        return np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+    else:
+        # cross of all zeros only occurs on identical directions
+        return np.eye(3)
+
+
+def get_arbitrary_axis_rotation_matrix(axis, angle):
+    """Rotate a point around an arbitrary axis in 3D space.
+    """
+    # Normalize the axis vector
+    axis = np.array(axis)
+    axis /= np.linalg.norm(axis)
+    # Compute components of rotation matrix
+    cos_theta = np.cos(angle)
+    sin_theta = np.sin(angle)
+    ux, uy, uz = axis
+    ux2 = ux ** 2
+    uy2 = uy ** 2
+    uz2 = uz ** 2
+    uxy = ux * uy
+    uyz = uy * uz
+    uzx = uz * ux
+    # Compute rotation matrix
+    rotation_matrix = np.array([
+        [cos_theta + ux2*(1 - cos_theta), uxy*(1 - cos_theta) - uz*sin_theta, uzx*(1 - cos_theta) + uy*sin_theta],
+        [uxy*(1 - cos_theta) + uz*sin_theta, cos_theta + uy2*(1 - cos_theta), uyz*(1 - cos_theta) - ux*sin_theta],
+        [uzx*(1 - cos_theta) - uy*sin_theta, uyz*(1 - cos_theta) + ux*sin_theta, cos_theta + uz2*(1 - cos_theta)]
+    ])
+    return rotation_matrix
+
+
+def get_rotation_matrix(t3_local, t2_local, t3, t2):
+    """Find the rotation matrix that aligns two pairs of vectors.
+
+    Notes
+    -----
+    This function provides a transformation matrix that rotates t3_local to
+    align with t3 while simultaneously rotating t2_local to align with t2.
+    To do this, the function first finds the rotation matrix that aligns
+    t3_local to t3. Once that first rotation is applied, the function then
+    finds the rotation matrix that aligns the intermediately-rotated t2_local
+    to t2. The final rotation matrix is the product of these two rotations.
+
+    This function does not work with all possible input vectors. It is possible
+    that the resulting rotation matrix will generate a rotated t3_local vector
+    that is not aligned with t3, but rather is aligned with -t3. This is
+    because the rotation matrix is not unique. This function checks for this
+    possibility and corrects the rotation matrix accordingly.
+    """
+    # Align t3_local with t3
+    R1 = rotation_matrix_from_vectors(t3_local, t3)
+    # Check progress
+    assert np.allclose(np.dot(R1, t3_local), t3), "Error with R1"
+    # Rotate t2_local by R1
+    t2_local_rotated = np.dot(R1, t2_local)
+    # Find the rotation matrix that aligns t2_local_rotated with t2
+    R2 = rotation_matrix_from_vectors(t2_local_rotated, t2)
+    # Check progress
+    assert np.allclose(np.dot(R2, t2_local_rotated), t2), "Error with R2"
+    # Find the final rotation matrix
+    R = np.matmul(R2, R1)
+    # Check for the possibility of an antiparallel t3 orientation
+    if np.allclose(np.dot(R, t3_local), -np.asarray(t3)):
+        # Correct the rotation matrix
+        R3 = get_arbitrary_axis_rotation_matrix(t2, np.pi)
+        R = np.matmul(R3, R)
+    # Check progress
+    assert np.allclose(np.dot(R, t3_local), t3), "Error with R (rotating t3)"
+    assert np.allclose(np.dot(R, t2_local), t2), "Error with R (rotating t2)"
+    return R

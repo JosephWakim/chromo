@@ -22,6 +22,7 @@ from pathlib import Path
 import inspect
 import collections
 import shutil
+import json
 from typing import List, Callable, Any, Tuple, Dict
 import os
 
@@ -48,6 +49,8 @@ run_script_kwarg = "path_to_run_script"
 chem_mod_kwarg = "path_to_chem_mods"
 # The command used to run the simulation will go in
 run_command_kwarg = "run_command"
+# This is the path to the configuration file
+config_file_path_kwarg = "config_file_path"
 
 
 class make_reproducible(object):
@@ -439,26 +442,68 @@ def store_mod_patterns(duplicate_chromo_dir, **kwargs):
     return kwargs
 
 
+def store_config_file(duplicate_chromo_dir, **kwargs):
+    if config_file_path_kwarg not in kwargs:
+        return kwargs, None
+    if kwargs[config_file_path_kwarg] is not None:
+
+        # Add the random seed to the config file
+        config_file_path = kwargs[config_file_path_kwarg]
+        with open(config_file_path, "r") as f:
+            config = f.read()
+        config = json.loads(config)
+        config['random_seed'] = kwargs['random_seed']
+
+        # Save the config file to the duplicates
+        save_path = \
+            f"{duplicate_chromo_dir}/simulations/examples/config_file.json"
+        save_path_2 = \
+            f"{kwargs[output_dir_param_name]}/config_file.json"
+        with open(save_path, "w") as f:
+            json.dump(config, f)
+        with open(save_path_2, "w") as f:
+            json.dump(config, f)
+        kwargs.pop(config_file_path_kwarg, None)
+        return kwargs, save_path
+
+    kwargs.pop(config_file_path_kwarg, None)
+    return kwargs, None
+
+
 def store_run_command(duplicate_sim_dir, duplicate_chromo_dir, **kwargs):
+    # If we made a config file, we need to store that in the duplicate
+    kwargs, config_file_path = store_config_file(duplicate_chromo_dir, **kwargs)
+    # If config_file_path is not None, then simulation was run w/ a config file
+    run_with_config = (config_file_path is not None)
     if run_command_kwarg not in kwargs:
         return kwargs
     if kwargs[run_command_kwarg] is not None:
+        # If the simulation was run with a config file, update the run command
+        # to use the config file in the output directory
+        if run_with_config:
+            run_command = kwargs[run_command_kwarg]
+            run_command = " ".join(run_command.split(" ")[:-1])
+            run_command += f" {config_file_path}"
+        # Otherwise, add the random seed to the run command directly
+        else:
+            run_command = kwargs[run_command_kwarg] + \
+                f" {kwargs['random_seed']}"
+        # Now copy the run command to the output directory
         save_path = \
             f"{duplicate_chromo_dir}/simulations/examples/run_command.sh"
         save_path_2 = \
             f"{kwargs[output_dir_param_name]}/sim_call.txt"
-        with open(save_path, "w") as f:
-            f.write(kwargs[run_command_kwarg])
-            f.write(f" {kwargs['random_seed']}")
-        with open(save_path_2, "w") as f:
-            f.write(kwargs[run_command_kwarg])
+        with open(save_path, 'w') as f:
+            f.write(run_command)
+        with open(save_path_2, 'w') as f:
+            f.write(run_command)
         rerun_sim_path = f"{duplicate_sim_dir}/rerun_sim.sh"
         with open(rerun_sim_path, "w") as f:
             f.write("cd chromo\n")
             f.write("bash make_essentials.sh\n")
             f.write("cd simulations/examples\n")
             f.write("bash run_command.sh\n")
-    kwargs.pop(run_command_kwarg, None)
+        kwargs.pop(run_command_kwarg, None)
     return kwargs
 
 

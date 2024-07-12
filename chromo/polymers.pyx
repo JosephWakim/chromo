@@ -1,4 +1,4 @@
-# cython: profile=True
+# cython: profile=False
 
 """Polymers that will make up our simulation.
 """
@@ -14,6 +14,7 @@ from libc.math cimport sin, cos
 import numpy as np
 cimport numpy as np
 import pandas as pd
+from scipy.special import comb
 
 # Custom Modules
 import chromo.beads as beads
@@ -21,6 +22,7 @@ import chromo.util.mc_stat as mc_stat
 from chromo.util.linalg cimport (vec_sub3, vec_dot3, vec_scale3)
 from .util import dss_params
 from .util import poly_paths as paths
+from .util.nucleo_geom import consts_dict
 
 # Global type aliases and variables
 ctypedef np.uint8_t uint8
@@ -30,7 +32,12 @@ cdef np.ndarray empty_1d = np.empty((0, ))
 cdef np.ndarray empty_1d_str = np.empty((0, ), dtype=str)
 
 
-cdef double E_HUGE = 1E99
+cdef double E_HUGE = 1E25
+
+# Length per base pair of DNA
+cdef double LENGTH_BP = 0.332
+# Natural twist of linker DNA (in radians / bp)
+cdef double NATURAL_TWIST_BARE = 2 * np.pi / 10.5
 
 
 cdef class TransformedObject:
@@ -166,6 +173,7 @@ cdef class PolymerBase(TransformedObject):
         str log_path = "",
         double[:, ::1] t3 = empty_2d,
         double[:, ::1] t2 = empty_2d,
+        double[:] bead_length = empty_1d,
         double lp = 0,
         long[:, ::1] states = mty_2d_int,
         np.ndarray binder_names = empty_1d,
@@ -204,6 +212,10 @@ cdef class PolymerBase(TransformedObject):
         t2 : Optional array_like (N, 3) of double
             Material normal to each bead in the global coordinate system; this
             vector should be orthogonal to t2 (default is empty array)
+        bead_length : array_like (N,) of double
+            The length of each bond in the polymer (default is empty array)
+        lp : Optional double
+            The persistence length of the polymer (default is 0)
         states : Optional array_like (N, M) of int
             State of each of the M reader proteins being tracked for each of
             the N beads (default is empty array)
@@ -239,6 +251,7 @@ cdef class PolymerBase(TransformedObject):
         self.r = r
         self.t3 = t3
         self.t2 = t2
+        self.bead_length = bead_length
         self.states = states
         self.max_binders = max_binders
         self.binder_names = binder_names
@@ -256,11 +269,13 @@ cdef class PolymerBase(TransformedObject):
         self.lp = lp
         self.required_attrs = np.array([
             "name", "r", "t3", "t2", "states", "binder_names", "num_binders",
-            "beads", "num_beads", "lp"
+            "beads", "num_beads", "lp", "bead_length"
         ])
-        self._arrays = np.array(['r', 't3', 't2', 'states', 'chemical_mods'])
+        self._arrays = np.array(
+            ['r', 't3', 't2', 'states', 'chemical_mods', 'bead_length']
+        )
         self._3d_arrays = np.array(['r', 't3', 't2'])
-        self._single_values = np.array(["name", "lp", "num_beads"])
+        self._single_values = np.array(["name", "lp", "lt", "bp_wrap"])
 
         # For move proposals
         self.r_trial = self.r.copy()
@@ -459,13 +474,15 @@ cdef class PolymerBase(TransformedObject):
         num_mods = len(paths_to_seqs)
         if num_mods == 0:
             return mty_2d_int
-        first_seq = np.loadtxt(paths_to_seqs[0], dtype=int)
+        first_seq = np.loadtxt(paths_to_seqs[0], dtype=float)
+        first_seq = np.round(first_seq).astype(int)
         num_beads = first_seq.shape[0]
         chemical_mods = np.zeros((num_beads, num_mods), dtype=int)
         chemical_mods[:, 0] = first_seq
         for i in range(1, num_mods):
             path = paths_to_seqs[i]
-            chemical_mod = np.loadtxt(path, dtype=int)
+            chemical_mod = np.loadtxt(path, dtype=float)
+            chemical_mod = np.round(chemical_mod).astype(int)
             if chemical_mod.shape[0] != num_beads:
                 raise ValueError(
                     "Inconsistent sequences of chemical modifications"
@@ -608,7 +625,8 @@ cdef class PolymerBase(TransformedObject):
         for name, arr in arrays.items():
             if name in self._3d_arrays:
                 vector_arrs[name] = arr
-            elif name != 'states' and name != 'chemical_mods':
+            elif name != 'states' and name != 'chemical_mods' \
+                    and name != "bead_length":
                 regular_arrs[name] = arr
         vector_arr = np.concatenate(list(vector_arrs.values()), axis=1)
         vector_index = pd.MultiIndex.from_product(
@@ -632,8 +650,13 @@ cdef class PolymerBase(TransformedObject):
             df = pd.concat([vector_df, states_df, chemical_mods_df], axis=1)
         else:
             df = vector_df
+        # Store bead lengths
+        df["bead_length"] = np.broadcast_to(
+            np.append(self.bead_length, 0).reshape((-1, 1)), (len(df.index), 1)
+        )
+        # Store scalar measure of the maximum number of beads
         for name, arr in regular_arrs.items():
-            if name == "bead_length" or name == "max_binders":
+            if name == "max_binders":
                 df[name] = np.broadcast_to(arr, (len(df.index), 1))
             else:
                 df[name] = arr
@@ -687,8 +710,14 @@ cdef class PolymerBase(TransformedObject):
         return cls.from_dataframe(df)
 
     @classmethod
-    def from_dataframe(cls, df, name=None):
+    def from_dataframe(cls, df, name=None, **kwargs):
         """Construct Polymer object from DataFrame; inverts `.to_dataframe`.
+
+        Notes
+        -----
+        TODO: For the DetailedChromatinWithSterics class, this method does not
+        TODO: load binders from file. Binders must be specified separately as
+        TODO: kwargs. Perhaps a binders file can be handled in the future.
 
         Parameters
         ----------
@@ -704,33 +733,46 @@ cdef class PolymerBase(TransformedObject):
         """
         # top-level multiindex values correspond to kwargs
         kwnames = np.unique(df.columns.get_level_values(0))
-        kwargs = {
+        kwargs_ = {
             name: np.ascontiguousarray(df[name].to_numpy()) for name in kwnames
         }
         # extract names of each epigenetic state from multi-index
         if 'states' in df:
             binder_names = df['states'].columns.to_numpy()
-            kwargs['binder_names'] = binder_names
+            kwargs_['binder_names'] = binder_names
         if 'chemical_mods' in df:
             chemical_mod_names = df['chemical_mods'].columns.to_numpy()
-            kwargs['chemical_mod_names'] = chemical_mod_names
-        if 'bead_length' in df:
-            kwargs['bead_length'] = kwargs['bead_length'][0]
+            kwargs_['chemical_mod_names'] = chemical_mod_names
         if 'max_binders' in df:
-            kwargs['max_binders'] = kwargs['max_binders'][0]
+            kwargs_['max_binders'] = kwargs_['max_binders'][0]
         if "name" in df and name is None:
-            kwargs['name'] = df['name'][0]
+            kwargs_['name'] = df['name'][0]
         elif name is None:
-            kwargs['name'] = "unnamed"
+            kwargs_['name'] = "unnamed"
         else:
-            kwargs['name'] = name
+            kwargs_['name'] = name
         if "lp" in df:
-            kwargs['lp'] = float(kwargs['lp'][0])
-        return cls(**kwargs)
+            kwargs_['lp'] = float(kwargs_['lp'][0])
+        if "lt" in df:
+            kwargs_['lt'] = float(kwargs_['lt'][0])
+        if "bp_wrap" in df:
+            kwargs_['bp_wrap'] = float(kwargs_['bp_wrap'][0])
+        if "bead_length" in df:
+            kwargs_['bead_length'] = \
+                np.asarray(kwargs_['bead_length'][:-1]).flatten().astype(float)
+        for key, value in kwargs.items():
+            kwargs_[key] = value
+        return cls(**kwargs_)
 
     @classmethod
-    def from_file(cls, path, name=None):
+    def from_file(cls, path, name=None, **kwargs):
         """Construct Polymer object from string representation.
+
+        Notes
+        -----
+        TODO: For the DetailedChromatinWithSterics class, this method does not
+        TODO: load binders from file. Binders must be specified separately as
+        TODO: kwargs. Perhaps a binders file can be handled in the future.
 
         Parameters
         ----------
@@ -747,7 +789,7 @@ cdef class PolymerBase(TransformedObject):
         if name is None:
             name = path.split("/")[-1].split(".")[0]
         df = pd.read_csv(path, header=[0, 1], index_col=0)
-        return cls.from_dataframe(df, name)
+        return cls.from_dataframe(df, name, **kwargs)
 
     cpdef long get_num_binders(self):
         """Return number of states tracked per bead.
@@ -774,8 +816,11 @@ cdef class PolymerBase(TransformedObject):
         
         Notes
         -----
-        The field will not be active if there are no binders defined or if there
-        are no binders bound.
+        In the future, you can make the code more efficient by activating the
+        field only when necessary. The field is necessary only when the polymer
+        is bound by reader proteins OR is in a confinement OR has a volume
+        fraction limit OR has a non-specific chi interaction. For now, to be
+        safe, we will assume that the field always needs to be assessed.
 
         Returns
         -------
@@ -783,12 +828,6 @@ cdef class PolymerBase(TransformedObject):
             Flag indicating whether the polymer is affected by the field (True)
             or is agnostic to the field (False)
         """
-        cdef long binders_bound
-        if self.states.shape[1] == 0:
-            return 0
-        binders_bound = np.sum(self.states, dtype=long)
-        if binders_bound == 0:
-            return 0
         return 1
 
 
@@ -915,14 +954,14 @@ cdef class SSWLC(PolymerBase):
         Ground-state segment compression (obtained from `_find_parameters`)
     eta : double
         Bend-shear coupling (obtained from `_find_parameters`)
-    bead_length : double
+    bead_length : np.ndarray (N-1,) of float
         Dimensional spacing between beads of the discrete polymer (in nm)
     bead_rad : double
         Dimensional radius of each bead in the polymer (in nm)
     """
 
     def __init__(
-        self, str name, double[:,::1] r, *, double bead_length, double lp,
+        self, str name, double[:,::1] r, *, double[:] bead_length, double lp,
         double bead_rad=5, double[:,::1] t3=empty_2d,
         double[:,::1] t2=empty_2d, long[:,::1] states=mty_2d_int,
         np.ndarray binder_names=empty_1d, long[:,::1] chemical_mods=mty_2d_int,
@@ -938,23 +977,23 @@ cdef class SSWLC(PolymerBase):
 
         Parameters
         ----------
-        bead_length : double
-            The amount of polymer path length between subsequent beads (in nm)
+        bead_length : double[:]
+            The amount of polymer path length between subsequent beads (in nm),
+            defined for each linker along the polymer
         lp : double
             Dimensional persistence length of the SSWLC (in nm)
         bead_rad : double
             Radius of individual beads on the polymer (in nm)
         """
         cdef np.ndarray _arrays
-        self.bead_length = bead_length
         super(SSWLC, self).__init__(
             name, r, t3=t3, t2=t2, states=states, binder_names=binder_names,
-            log_path=log_path, chemical_mods=chemical_mods,
-            chemical_mod_names=chemical_mod_names, max_binders=max_binders
+            bead_length=bead_length, lp=lp, log_path=log_path,
+            chemical_mods=chemical_mods, chemical_mod_names=chemical_mod_names,
+            max_binders=max_binders
         )
         self.bead_rad = bead_rad
         self.construct_beads()
-        self.lp = lp
         self._find_parameters(self.bead_length)
         self.required_attrs = np.array([
             "name", "r", "t3", "t2", "states", "binder_names", "num_binders",
@@ -976,7 +1015,6 @@ cdef class SSWLC(PolymerBase):
                 r=self.r[i],
                 t3=self.t3[i],
                 t2=self.t2[i],
-                bead_length=self.bead_length,
                 states=self.states[i],
                 binder_names=self.binder_names,
                 rad=self.bead_rad
@@ -1022,10 +1060,9 @@ cdef class SSWLC(PolymerBase):
         delta_energy_poly = 0
 
         if move_name == "change_binding_state":
-            if self.is_field_active() == 1:
-                ind0 = inds[0]
-                indf = inds[n_inds-1] + 1
-                delta_energy_poly += self.binding_dE(ind0, indf, n_inds)
+            ind0 = inds[0]
+            indf = inds[n_inds-1] + 1
+            delta_energy_poly += self.binding_dE(ind0, indf, n_inds)
         
         elif (
             move_name == "slide" or move_name == "end_pivot" or
@@ -1092,7 +1129,8 @@ cdef class SSWLC(PolymerBase):
                 self.r_trial[ind0, :],
                 self.t3[ind0_m_1, :],
                 self.t3[ind0, :],
-                self.t3_trial[ind0, :]
+                self.t3_trial[ind0, :],
+                bond_ind = ind0_m_1
             )
         if indf != self.num_beads:
             delta_energy_poly += self.bead_pair_dE_poly_reverse(
@@ -1101,12 +1139,15 @@ cdef class SSWLC(PolymerBase):
                 self.r[indf, :],
                 self.t3[indf_m_1, :],
                 self.t3_trial[indf_m_1, :],
-                self.t3[indf, :]
+                self.t3[indf, :],
+                bond_ind = indf_m_1
             )
 
         return delta_energy_poly
 
-    cdef double E_pair(self, double[:] bend, double dr_par, double[:] dr_perp):
+    cdef double E_pair(
+        self, double[:] bend, double dr_par, double[:] dr_perp, long bond_ind
+    ):
         """Calculate elastic energy for a pair of beads.
 
         Parameters
@@ -1117,6 +1158,8 @@ cdef class SSWLC(PolymerBase):
             Magnitude of the parallel component of the displacement vector
         dr_perp : double[:]
             Perpendicular component of the displacement vector
+        bond_ind : long
+            Index of the bond between the beads
 
         Returns
         -------
@@ -1125,9 +1168,9 @@ cdef class SSWLC(PolymerBase):
         """
         cdef double E
         E = (
-            0.5 * self.eps_bend * vec_dot3(bend, bend) +
-            0.5 * self.eps_par * (dr_par - self.gamma) ** 2 +
-            0.5 * self.eps_perp * vec_dot3(dr_perp, dr_perp)
+            0.5 * self.eps_bend[bond_ind] * vec_dot3(bend, bend) +
+            0.5 * self.eps_par[bond_ind] * (dr_par - self.gamma[bond_ind])**2 +
+            0.5 * self.eps_perp[bond_ind] * vec_dot3(dr_perp, dr_perp)
         )
         return E
 
@@ -1138,7 +1181,8 @@ cdef class SSWLC(PolymerBase):
         double[:] test_r_1,
         double[:] t3_0,
         double[:] t3_1,
-        double[:] test_t3_1
+        double[:] test_t3_1,
+        long bond_ind
     ):
         """Compute change in polymer energy when affecting a single bead pair.
         
@@ -1199,6 +1243,8 @@ cdef class SSWLC(PolymerBase):
             t3 tangent vector of second bead in bend
         test_t3_1 : array_like (3,)
             t3 tangent vector of second bead in bend (TRIAL MOVE)
+        bond_ind : int
+            Index of the bond being affected
 
         Returns
         -------
@@ -1218,13 +1264,17 @@ cdef class SSWLC(PolymerBase):
             self.dr_perp_test[i] = self.dr_test[i] - t3_0[i] * dr_par_test
             self.dr_perp[i] = self.dr[i] - t3_0[i] * dr_par
             self.bend_test[i] = (
-                test_t3_1[i] - t3_0[i] - self.dr_perp_test[i] * self.eta
+                test_t3_1[i] - t3_0[i] - self.dr_perp_test[i] *
+                self.eta[bond_ind]
             )
             self.bend[i] = (
-                t3_1[i] - t3_0[i] - self.dr_perp[i] * self.eta
+                t3_1[i] - t3_0[i] - self.dr_perp[i] * self.eta[bond_ind]
             )
-        return self.E_pair(self.bend_test, dr_par_test, self.dr_perp_test) -\
-            self.E_pair(self.bend, dr_par, self.dr_perp)
+        return self.E_pair(
+            self.bend_test, dr_par_test, self.dr_perp_test, bond_ind
+        ) - self.E_pair(
+            self.bend, dr_par, self.dr_perp, bond_ind
+        )
 
     cdef double bead_pair_dE_poly_reverse(
         self,
@@ -1233,7 +1283,8 @@ cdef class SSWLC(PolymerBase):
         double[:] r_1,
         double[:] t3_0,
         double[:] test_t3_0,
-        double[:] t3_1
+        double[:] t3_1,
+        long bond_ind
     ):
         """Compute change in polymer energy when affecting a single bead pair.
         
@@ -1262,6 +1313,8 @@ cdef class SSWLC(PolymerBase):
             t3 tangent vector of first bead in bend (TRIAL MOVE)
         t3_1 : array_like (3,)
             t3 tangent vector of second bead in bend
+        bond_ind : int
+            Index of the bond being affected
 
         Returns
         -------
@@ -1280,13 +1333,17 @@ cdef class SSWLC(PolymerBase):
             self.dr_perp_test[i] = self.dr_test[i] - test_t3_0[i] * dr_par_test
             self.dr_perp[i] = self.dr[i] - t3_0[i] * dr_par
             self.bend_test[i] = (
-                t3_1[i] - test_t3_0[i] - self.dr_perp_test[i] * self.eta
+                t3_1[i] - test_t3_0[i] - self.dr_perp_test[i] *
+                self.eta[bond_ind]
             )
             self.bend[i] = (
-                t3_1[i] - t3_0[i] - self.dr_perp[i] * self.eta
+                t3_1[i] - t3_0[i] - self.dr_perp[i] * self.eta[bond_ind]
             )
-        return self.E_pair(self.bend_test, dr_par_test, self.dr_perp_test) -\
-            self.E_pair(self.bend, dr_par, self.dr_perp)
+        return self.E_pair(
+            self.bend_test, dr_par_test, self.dr_perp_test, bond_ind
+        ) - self.E_pair(
+            self.bend, dr_par, self.dr_perp, bond_ind
+        )
 
     cpdef double compute_E(self):
         """Compute the overall polymer energy at the current configuration.
@@ -1302,24 +1359,25 @@ cdef class SSWLC(PolymerBase):
             Configurational energy of the polymer.
         """
         cdef double E, dr_par
-        cdef long i, j
+        cdef long i, j, i_m1
         cdef double[:] dr, dr_perp, bend
         cdef double[:] r_0, r_1, t3_0, t3_1
 
         E = 0
         for i in range(1, self.num_beads):
-            r_0 = self.r[i-1, :]
+            i_m1 = i - 1
+            r_0 = self.r[i_m1, :]
             r_1 = self.r[i, :]
-            t3_0 = self.t3[i-1, :]
+            t3_0 = self.t3[i_m1, :]
             t3_1 = self.t3[i, :]
-
             dr = vec_sub3(r_1, r_0)
             dr_par = vec_dot3(t3_0, dr)
             dr_perp = vec_sub3(dr, vec_scale3(t3_0, dr_par))
             bend = t3_1.copy()
             for j in range(3):
-                bend[j] += -t3_0[j] - self.eta * dr_perp[j]
-            E += self.E_pair(bend, dr_par, dr_perp)
+                bend[j] += -t3_0[j] - self.eta[i_m1] * dr_perp[j]
+            E += self.E_pair(bend, dr_par, dr_perp, i_m1)
+
         return E
 
     cdef double binding_dE(self, long ind0, long indf, long n_inds):
@@ -1352,12 +1410,28 @@ cdef class SSWLC(PolymerBase):
         
         Notes
         -----
-        Begin by determining whether or not the bead is chemically modified.
-        Then, calculate the energy associated with the proposed binding state.
-        For each bound tail, the interaction energy (dependent on the chemical
-        modification state) is added to `dE` and the chemical potential is 
-        subtracted from `dE`. Finally, using the same approach, subtract the 
-        energy associated with the current binding state.
+        Begin by identifying the chemical modification and binding states of the
+        nucleosome. Using a single-site partition function, we compute the
+        expected binding energy over all possible binding configurations.
+        Previously, we had assumed that binders will first bind marked sites
+        before binding unmarked sites. Using the single-site partition function,
+        we remove this assumption and consider the entropy of binding.
+        
+        Consider that we are arranging `Nb` binders on `Nn` sites, of which `Nm`
+        are marked. We can have up to `min(Nb, Nm)` binders on marked sites. For
+        each value `i` in range(`min(Nb, Nm)`), there are `comb(Nm, i)` ways to
+        arrange `i` binders on marked sites and `comb(Nn-Nm, Nb-i)` ways to
+        arrange the remaining `Nb-i` binders on unmarked sites. Thus, the total
+        number of ways to arrange `Nb` binders on `Nn` sites, of which `Nm` are
+        marked, is the sum of `comb(Nm, i) * comb(Nn-Nm, Nb-i)` for `i` in
+        range(`min(Nb, Nm)`). This is equivalent to `comb(Nn, Nb)`.
+        
+         The energy of each configuration is determined by the number of binders
+        on marked sites, or `i`. If there is an energy `E_b` associated with
+        each binder on a marked site, then the total energy of the configuration
+        is `i * E_b`. Therefore, the site partition function representing
+        binding is given by `sum(comb(Nm, i) * comb(Nn-Nm, Nb-i) * exp(-i * E_b))`
+        for `i` in range(`min(Nb, Nm)`).
         
         `self.max_binders` indicates the maximum number of total binders of any
         type that can bind a single bead. This attribute accounts for steric
@@ -1379,7 +1453,7 @@ cdef class SSWLC(PolymerBase):
         double
             The energy change from the single bead's change in binding state
         """
-        cdef long i, num_tails, modified_tails, unmodified_tails
+        cdef long h, Nn, Nm, Nu
         cdef long tot_bound, diff
         cdef double dE
         cdef long[:] mod_states, states_ind
@@ -1393,67 +1467,74 @@ cdef class SSWLC(PolymerBase):
 
             # Trail configuration
             tot_bound = 0
-            for i in range(self.num_binders):
-                tot_bound += states_trial_ind[i]
+            for h in range(self.num_binders):
+                tot_bound += states_trial_ind[h]
             if tot_bound > self.max_binders:
                 diff = tot_bound - self.max_binders
                 dE += E_HUGE * diff
 
             # Current configuration
             tot_bound = 0
-            for i in range(self.num_binders):
-                tot_bound += states_ind[i]
+            for h in range(self.num_binders):
+                tot_bound += states_ind[h]
             if tot_bound > self.max_binders:
                 diff = tot_bound - self.max_binders
                 dE -= E_HUGE * diff
 
         # Evaluate the change in binding energy
-        for i in range(self.num_binders):
-            num_tails = self.beads[ind].binders[i].sites_per_bead
-            modified_tails = mod_states[i]
-            unmodified_tails = num_tails - modified_tails
-
-            # Trial configuration
-            for j in range(states_trial_ind[i]):
-                if j+1 <= modified_tails:
-                    dE += (
-                        self.beads[ind].binders[i].bind_energy_mod -
-                        (min(
-                            self.beads[ind].binders[i].chemical_potential,
-                            self.beads[ind].binders[i].chemical_potential *
-                            self.mu_adjust_factor
-                        ))
+        for b in range(self.num_binders):
+            # Number of sites
+            Nn = self.beads[ind].binders[b].sites_per_bead
+            # Number of modified tails
+            Nm = mod_states[b]
+            # Number of unmodified tails
+            Nu = Nn - Nm
+            # Single-site Helmholtz free energy (trial configuration)
+            i = np.arange(states_trial_ind[b] + 1)
+            dE += -np.log(np.sum(
+                comb(Nm, i) *
+                comb(Nn - Nm, states_trial_ind[b] - i) *
+                (np.exp(
+                    - (
+                        i * self.beads[ind].binders[b].bind_energy_mod +
+                        (states_trial_ind[b] - i) *
+                        self.beads[ind].binders[b].bind_energy_no_mod
                     )
-                else:
-                    dE += (
-                        self.beads[ind].binders[i].bind_energy_no_mod -
-                        (min(
-                            self.beads[ind].binders[i].chemical_potential,
-                            self.beads[ind].binders[i].chemical_potential *
-                            self.mu_adjust_factor
-                        ))
+                ))
+            ))
+            # Single-site Helmholtz free energy (current configuration)
+            i = np.arange(states_ind[b] + 1)
+            dE -= -np.log(np.sum(
+                comb(Nm, i) *
+                comb(Nn - Nm, states_ind[b] - i) *
+                (np.exp(
+                    - (
+                        i * self.beads[ind].binders[b].bind_energy_mod +
+                        (states_ind[b] - i) *
+                        self.beads[ind].binders[b].bind_energy_no_mod
                     )
-
-            # Current configuration
-            for j in range(states_ind[i]):
-                if j+1 <= modified_tails:
-                    dE -= (
-                        self.beads[ind].binders[i].bind_energy_mod -
-                        (min(
-                            self.beads[ind].binders[i].chemical_potential,
-                            self.beads[ind].binders[i].chemical_potential *
-                            self.mu_adjust_factor
-                        ))
-                    )
-                else:
-                    dE -= (
-                        self.beads[ind].binders[i].bind_energy_no_mod -
-                        (min(
-                            self.beads[ind].binders[i].chemical_potential,
-                            self.beads[ind].binders[i].chemical_potential *
-                            self.mu_adjust_factor
-                        ))
-                    )
+                ))
+            ))
+            # Chemical potential
+            # Note: Simulated annealing affects positive and negative chemical
+            # potentials in different ways
+            # TODO: Accommodate different types of simulated annealing schedules
+            if self.beads[ind].binders[b].chemical_potential > 0:
+                dE -= states_trial_ind[b] * (
+                    self.beads[ind].binders[b].chemical_potential *
+                    (-self.mu_adjust_factor + 2)
+                )
+                dE += states_ind[b] * (
+                    self.beads[ind].binders[b].chemical_potential *
+                    (-self.mu_adjust_factor + 2)
+                )
+            else:
+                dE -= states_trial_ind[b] * \
+                    self.beads[ind].binders[b].chemical_potential * \
+                    self.mu_adjust_factor
+                dE += states_ind[b] * \
+                    self.beads[ind].binders[b].chemical_potential * \
+                    self.mu_adjust_factor
         return dE
 
     def __str__(self):
@@ -1461,7 +1542,7 @@ cdef class SSWLC(PolymerBase):
         """
         return f"Polymer_Class<SSWLC>, {super(SSWLC, self).__str__()}"
 
-    cpdef void _find_parameters(self, double length_bead):
+    cpdef void _find_parameters(self, double[:] bead_length):
         """Look up elastic parameters of ssWLC for each bead_length.
         
         Interpolate from the parameter table to get the physical parameters of
@@ -1490,29 +1571,38 @@ cdef class SSWLC(PolymerBase):
 
         Parameters
         ----------
-        length_bead : double
+        bead_length : double
             Dimensional distance between subsequent beads of the polymer (in nm)
         """
-        self.delta = length_bead / self.lp
-        self.eps_bend = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 1]
-        ) / self.delta
-        self.gamma = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 2]
-        ) * self.delta * self.lp
-        self.eps_par = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 3]
-        ) / (self.delta * self.lp**2)
-        self.eps_perp = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 4]
-        ) / (self.delta * self.lp**2)
-        self.eta = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 5]
-        ) / self.lp
+        cdef long i
+        bead_length = np.asarray(bead_length)
+        self.delta = np.zeros(len(bead_length))
+        self.eps_bend = np.zeros(len(bead_length))
+        self.gamma = np.zeros(len(bead_length))
+        self.eps_par = np.zeros(len(bead_length))
+        self.eps_perp = np.zeros(len(bead_length))
+        self.eta = np.zeros(len(bead_length))
+        for i in range(len(bead_length)):
+            self.delta[i] = bead_length[i] / self.lp
+            self.eps_bend[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 1]
+            ) / self.delta[i]
+            self.gamma[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 2]
+            ) * self.delta[i] * self.lp
+            self.eps_par[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 3]
+            ) / (self.delta[i] * self.lp**2)
+            self.eps_perp[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 4]
+            ) / (self.delta[i] * self.lp**2)
+            self.eta[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 5]
+            ) / self.lp
 
     @classmethod
     def straight_line_in_x(
-        cls, name: str, num_beads: int, bead_length: float, **kwargs
+        cls, name: str, step_sizes: np.ndarray, **kwargs
     ):
         """Construct polymer initialized uniformly along the positve x-axis.
 
@@ -1520,10 +1610,10 @@ cdef class SSWLC(PolymerBase):
         ----------
         name : str
             Name of polymer being constructed
-        num_beads : int
-            Number of monomeric units of polymer
-        bead_length : float
+        step_sizes : np.ndarray (N-1,) of float
             Dimensional distance between subsequent beads of the polymer (in nm)
+            represented as an (N-1,) array where N is the number of beads in the
+            polymer.
 
         Returns
         -------
@@ -1531,13 +1621,17 @@ cdef class SSWLC(PolymerBase):
             Object representation of a polymer currently configured as a
             straight line
         """
+        # Get the cumulative sum of the step sizes
+        csum = np.cumsum(step_sizes)
+        # Initialize the positions and orientations of the polymer
+        num_beads = len(step_sizes) + 1
         r = np.zeros((num_beads, 3))
-        r[:, 0] = bead_length * np.arange(num_beads)
+        r[1:, 0] = csum.copy()
         t3 = np.zeros((num_beads, 3))
         t3[:, 0] = 1
         t2 = np.zeros((num_beads, 3))
         t2[:, 1] = 1
-        return cls(name, r, t3=t3, t2=t2, bead_length=bead_length, **kwargs)
+        return cls(name, r, t3=t3, t2=t2, bead_length=step_sizes, **kwargs)
 
     @classmethod
     def arbitrary_path_in_x_y(
@@ -1632,7 +1726,7 @@ cdef class SSWLC(PolymerBase):
 
     @classmethod
     def gaussian_walk_polymer(
-        cls, name: str, num_beads: int, bead_length: float, **kwargs
+        cls, name: str, num_beads: int, step_lengths: np.ndarray, **kwargs
     ):
         """Initialize a polymer to a Gaussian random walk.
 
@@ -1642,7 +1736,7 @@ cdef class SSWLC(PolymerBase):
             Name of the polymer
         num_beads : int
             Number of monomer units on the polymer
-        bead_length : float
+        step_lengths : np.ndarray (N-1,) float
             Dimensional distance between subsequent beads of the polymer (in nm)
 
         Returns
@@ -1650,14 +1744,14 @@ cdef class SSWLC(PolymerBase):
         SSWLC
             Object representing a polymer initialized as Gaussian random walk
         """
-        r = paths.gaussian_walk(num_beads, bead_length)
+        r = paths.gaussian_walk(num_beads-1, step_lengths)
         t3, t2 = paths.estimate_tangents_from_coordinates(r)
-        return cls(name, r, t3=t3, t2=t2, bead_length=bead_length, **kwargs)
+        return cls(name, r, t3=t3, t2=t2, bead_length=step_lengths, **kwargs)
 
     @classmethod
     def confined_gaussian_walk(
-        cls, name: str, num_beads: int, bead_length: float, confine_type: str,
-        confine_length: float, **kwargs
+        cls, name: str, num_beads: int, step_lengths: np.ndarray,
+        confine_type: str, confine_length: float, **kwargs
     ):
         """Initialize a polymer to a confined Gaussian random walk.
 
@@ -1667,7 +1761,7 @@ cdef class SSWLC(PolymerBase):
             Name of the polymer
         num_beads : int
             Number of monomer units on the polymer
-        bead_length : float
+        step_lengths : np.ndarray (N-1,) float
             Dimensional distance between subsequent beads of the polymer (in nm)
         confine_type : str
             Name of the confining boundary; to indicate model w/o confinement,
@@ -1682,15 +1776,16 @@ cdef class SSWLC(PolymerBase):
             Object representing a polymer initialized as a confined Gaussian
             random walk
         """
+        step_lengths = np.ascontiguousarray(step_lengths)
         r = paths.confined_gaussian_walk(
-            num_beads, bead_length, confine_type, confine_length
+            num_beads, step_lengths, confine_type, confine_length
         )
         t3, t2 = paths.estimate_tangents_from_coordinates(r)
-        return cls(name, r, t3=t3, t2=t2, bead_length=bead_length, **kwargs)
+        return cls(name, r, t3=t3, t2=t2, bead_length=step_lengths, **kwargs)
 
     @classmethod
     def confined_uniform_random_walk(
-            cls, name: str, num_beads: int, bead_length: float, confine_type: str,
+            cls, name: str, num_beads: int, step_lengths: float, confine_type: str,
             confine_length: float, **kwargs
     ):
         """Initialize a polymer to a confined uniform random walk.
@@ -1701,7 +1796,7 @@ cdef class SSWLC(PolymerBase):
             Name of the polymer
         num_beads : int
             Number of monomer units on the polymer
-        bead_length : float
+        step_lengths : float
             Dimensional distance between subsequent beads of the polymer (in nm)
         confine_type : str
             Name of the confining boundary; to indicate model w/o confinement,
@@ -1717,10 +1812,10 @@ cdef class SSWLC(PolymerBase):
             random walk
         """
         r = paths.confined_uniform_random_walk(
-            num_beads, bead_length, confine_type, confine_length
+            num_beads, step_lengths, confine_type, confine_length
         )
         t3, t2 = paths.estimate_tangents_from_coordinates(r)
-        return cls(name, r, t3=t3, t2=t2, bead_length=bead_length, **kwargs)
+        return cls(name, r, t3=t3, t2=t2, bead_length=step_lengths, **kwargs)
 
 
 cdef class Chromatin(SSWLC):
@@ -1746,7 +1841,7 @@ cdef class Chromatin(SSWLC):
         str name,
         np.ndarray[double, ndim=2] r,
         *,
-        double bead_length,
+        double[:] bead_length,
         double bead_rad = 5,
         np.ndarray[double, ndim=2] t3 = empty_2d,
         np.ndarray[double, ndim=2] t2 = empty_2d,
@@ -1784,7 +1879,6 @@ cdef class Chromatin(SSWLC):
                 r=self.r[i],
                 t3=self.t3[i],
                 t2=self.t2[i],
-                bead_length=self.bead_length,
                 rad=self.bead_rad,
                 states=self.states[i],
                 binder_names=self.binder_names
@@ -1817,7 +1911,7 @@ cdef class SSTWLC(SSWLC):
         str name,
         double[:, ::1] r,
         *,
-        double bead_length,
+        double[:] bead_length,
         double lp,
         double lt,
         double bead_rad = 5,
@@ -1841,16 +1935,14 @@ cdef class SSTWLC(SSWLC):
             Twist persistence length (in nm)
         """
         cdef np.ndarray _arrays
-
-        self.bead_length = bead_length
-        super(SSWLC, self).__init__(
+        super(SSTWLC, self).__init__(
             name, r, t3=t3, t2=t2, states=states, binder_names=binder_names,
-            log_path=log_path, chemical_mods=chemical_mods,
-            chemical_mod_names=chemical_mod_names, max_binders=max_binders
+            log_path=log_path, chemical_mods=chemical_mods, lp=lp,
+            bead_length=bead_length, chemical_mod_names=chemical_mod_names,
+            max_binders=max_binders
         )
         self.bead_rad = bead_rad
         self.construct_beads()
-        self.lp = lp
         self.lt = lt
         self._find_parameters(self.bead_length)
         self.required_attrs = np.array([
@@ -1862,7 +1954,7 @@ cdef class SSTWLC(SSWLC):
         )
         self.check_attrs()
 
-    cpdef void _find_parameters(self, double length_bead):
+    cpdef void _find_parameters(self, double[:] step_lengths):
         """Look up elastic parameters of ssWLC for each bead_length.
 
         Notes
@@ -1878,26 +1970,35 @@ cdef class SSTWLC(SSWLC):
 
         Parameters
         ----------
-        length_bead : double
-            Number of base pairs represented by each bead of the polymer
+        step_lengths : np.ndarray (N-1,) of double
+            Dimensional distance between subsequent beads of the polymer (in nm)
         """
-        self.delta = length_bead / self.lp
-        self.eps_bend = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 1]
-        ) / self.delta
-        self.gamma = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 2]
-        ) * self.delta * self.lp
-        self.eps_par = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 3]
-        ) / (self.delta * self.lp**2)
-        self.eps_perp = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 4]
-        ) / (self.delta * self.lp**2)
-        self.eta = np.interp(
-            self.delta, dss_params[:, 0], dss_params[:, 5]
-        ) / self.lp
-        self.eps_twist = self.lt / (self.delta * self.lp)
+        step_lengths = np.asarray(step_lengths)
+        self.delta = np.zeros(len(step_lengths))
+        self.eps_bend = np.zeros(len(step_lengths))
+        self.gamma = np.zeros(len(step_lengths))
+        self.eps_par = np.zeros(len(step_lengths))
+        self.eps_perp = np.zeros(len(step_lengths))
+        self.eta = np.zeros(len(step_lengths))
+        self.eps_twist = np.zeros(len(step_lengths))
+        for i in range(len(step_lengths)):
+            self.delta[i] = step_lengths[i] / self.lp
+            self.eps_bend[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 1]
+            ) / self.delta[i]
+            self.gamma[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 2]
+            ) * self.delta[i] * self.lp
+            self.eps_par[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 3]
+            ) / (self.delta[i] * self.lp**2)
+            self.eps_perp[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 4]
+            ) / (self.delta[i] * self.lp**2)
+            self.eta[i] = np.interp(
+                self.delta[i], dss_params[:, 0], dss_params[:, 5]
+            ) / self.lp
+            self.eps_twist[i] = self.lt / (self.delta[i] * self.lp)
 
     cdef double continuous_dE_poly(
         self,
@@ -1928,7 +2029,8 @@ cdef class SSTWLC(SSWLC):
                 self.t3_trial[ind0, :],
                 self.t2[ind0_m_1, :],
                 self.t2[ind0, :],
-                self.t2_trial[ind0, :]
+                self.t2_trial[ind0, :],
+                bond_ind = ind0_m_1
             )
         if indf != self.num_beads:
             delta_energy_poly += self.bead_pair_dE_poly_reverse_with_twist(
@@ -1940,12 +2042,14 @@ cdef class SSTWLC(SSWLC):
                 self.t3[indf, :],
                 self.t2[indf_m_1, :],
                 self.t2_trial[indf_m_1, :],
-                self.t2[indf, :]
+                self.t2[indf, :],
+                bond_ind = indf_m_1
             )
         return delta_energy_poly
 
     cdef double E_pair_with_twist(
-        self, double[:] bend, double dr_par, double[:] dr_perp, double omega
+        self, double[:] bend, double dr_par, double[:] dr_perp, double omega,
+        long bond_ind
     ):
         """Calculate elastic energy for a pair of beads.
         
@@ -1963,18 +2067,37 @@ cdef class SSTWLC(SSWLC):
             Perpendicular component of the displacement vector
         omega : double
             Twist angle (in radians)
+        bond_ind : long
+            Index of the bond between the two beads
 
         Returns
         -------
         double
             Elastic energy of bond between the bead pair
         """
-        cdef double E
+        cdef double E, delta_omega
+
+        # Note, natural twist is based on the number of base pairs in a linker.
+        # If the linker stretches, the mean-squared end-to-end distances of
+        # polymer segments may deviate from theory, unless `bead_length[ind]`
+        # is equal to the stretched bond length.
+
+        # TODO: Adding twist seems to increase linker lengths! Why is this?
+
+        # Adjust for natural twist of DNA (2 pi / 10.5 bp * 1 bp / 0.332 nm)
+        delta_omega = omega - (
+            self.bead_length[bond_ind] * NATURAL_TWIST_BARE / LENGTH_BP
+        )
+        # Assume polymer is well-behaved and twists < 2pi from relaxed state
+        delta_omega -= 2 * np.pi * ((delta_omega + np.pi) // (2 * np.pi))
+        assert -np.pi <= delta_omega < np.pi, \
+            "Twist angle out of bounds."
+        assert self.eps_twist[bond_ind] > 0, "Twist modulus must be positive."
         E = (
-            0.5 * self.eps_bend * vec_dot3(bend, bend) +
-            0.5 * self.eps_par * (dr_par - self.gamma) ** 2 +
-            0.5 * self.eps_perp * vec_dot3(dr_perp, dr_perp) +
-            0.5 * self.eps_twist * omega**2
+            0.5 * self.eps_bend[bond_ind] * vec_dot3(bend, bend) +
+            0.5 * self.eps_par[bond_ind] * (dr_par - self.gamma[bond_ind])**2 +
+            0.5 * self.eps_perp[bond_ind] * vec_dot3(dr_perp, dr_perp) +
+            0.5 * self.eps_twist[bond_ind] * delta_omega**2
         )
         return E
 
@@ -1988,7 +2111,8 @@ cdef class SSTWLC(SSWLC):
         double[:] test_t3_1,
         double[:] t2_0,
         double[:] t2_1,
-        double[:] test_t2_1
+        double[:] test_t2_1,
+        long bond_ind
     ):
         """Compute change in polymer energy when affecting a single bead pair.
 
@@ -2015,6 +2139,8 @@ cdef class SSTWLC(SSWLC):
             t3, t2 tangent vector of second bead in bend
         test_t3_1, test_t2_1 : array_like (3,)
             t3, t2 tangent vector of second bead in bend (TRIAL MOVE)
+        bond_ind : long
+            Index of the bond between the two beads
 
         Returns
         -------
@@ -2023,52 +2149,29 @@ cdef class SSTWLC(SSWLC):
         """
         cdef long i
         cdef double omega, omega_test, dr_par, dr_par_test
-        cdef double[:] t1_0, t1_1, test_t1_1
-
-        t1_0 = np.array([
-            t2_0[1] * t3_0[2] - t2_0[2] * t3_0[1],
-            t2_0[2] * t3_0[0] - t2_0[0] * t3_0[2],
-            t2_0[0] * t3_0[1] - t2_0[1] * t3_0[0]
-        ])
-        t1_1 = np.array([
-            t2_1[1] * t3_1[2] - t2_1[2] * t3_1[1],
-            t2_1[2] * t3_1[0] - t2_1[0] * t3_1[2],
-            t2_1[0] * t3_1[1] - t2_1[1] * t3_1[0]
-        ])
-        test_t1_1 = np.array([
-            test_t2_1[1] * test_t3_1[2] - test_t2_1[2] * test_t3_1[1],
-            test_t2_1[2] * test_t3_1[0] - test_t2_1[0] * test_t3_1[2],
-            test_t2_1[0] * test_t3_1[1] - test_t2_1[1] * test_t3_1[0]
-        ])
-        omega = np.arctan2(
-            (np.dot(t2_0, t1_1) - np.dot(t1_0, t2_1)) /
-            (np.dot(t1_0, t1_1) + np.dot(t2_0, t2_1))
+        omega = compute_twist_angle_omega(t2_0, t3_0, t2_1, t3_1)
+        omega_test = compute_twist_angle_omega(
+            t2_0, t3_0, test_t2_1, test_t3_1
         )
-        omega_test = np.arctan2(
-            (np.dot(t2_0, test_t1_1) - np.dot(t1_0, test_t2_1)) /
-            (np.dot(t1_0, test_t1_1) + np.dot(t2_0, test_t2_1))
-        )
-
         for i in range(3):
             self.dr_test[i] = test_r_1[i] - r_0[i]
             self.dr[i] = r_1[i] - r_0[i]
         dr_par_test = vec_dot3(t3_0, self.dr_test)
         dr_par = vec_dot3(t3_0, self.dr)
-
         for i in range(3):
             self.dr_perp_test[i] = self.dr_test[i] - t3_0[i] * dr_par_test
             self.dr_perp[i] = self.dr[i] - t3_0[i] * dr_par
             self.bend_test[i] = (
-                test_t3_1[i] - t3_0[i] - self.dr_perp_test[i] * self.eta
+                test_t3_1[i] - t3_0[i] - self.dr_perp_test[i] *
+                self.eta[bond_ind]
             )
             self.bend[i] = (
-                t3_1[i] - t3_0[i] - self.dr_perp[i] * self.eta
+                t3_1[i] - t3_0[i] - self.dr_perp[i] * self.eta[bond_ind]
             )
         return (self.E_pair_with_twist(
-            self.bend_test, dr_par_test, self.dr_perp_test, omega_test
-        ) -
-            self.E_pair_with_twist(
-                self.bend, dr_par, self.dr_perp, omega
+            self.bend_test, dr_par_test, self.dr_perp_test, omega_test, bond_ind
+        ) - self.E_pair_with_twist(
+            self.bend, dr_par, self.dr_perp, omega, bond_ind
         ))
 
     cdef double bead_pair_dE_poly_reverse_with_twist(
@@ -2081,7 +2184,8 @@ cdef class SSTWLC(SSWLC):
         double[:] t3_1,
         double[:] t2_0,
         double[:] test_t2_0,
-        double[:] t2_1
+        double[:] t2_1,
+        long bond_ind
     ):
         """Compute change in polymer energy when affecting a single bead pair.
 
@@ -2108,6 +2212,8 @@ cdef class SSTWLC(SSWLC):
             t3, t2 tangent vector of first bead in bend (TRIAL MOVE)
         t3_1, t2_1 : array_like (3,)
             t3, t2 tangent vector of second bead in bend
+        bond_ind : long
+            Index of the bond between the two beads
 
         Returns
         -------
@@ -2116,30 +2222,9 @@ cdef class SSTWLC(SSWLC):
         """
         cdef long i
         cdef double omega, omega_test, dr_par, dr_par_test
-        cdef double[:] t1_0, t1_1, test_t1_0
-
-        t1_0 = np.array([
-            t2_0[1] * t3_0[2] - t2_0[2] * t3_0[1],
-            t2_0[2] * t3_0[0] - t2_0[0] * t3_0[2],
-            t2_0[0] * t3_0[1] - t2_0[1] * t3_0[0]
-        ])
-        test_t1_0 = np.array([
-            test_t2_0[1] * test_t3_0[2] - test_t2_0[2] * test_t3_0[1],
-            test_t2_0[2] * test_t3_0[0] - test_t2_0[0] * test_t3_0[2],
-            test_t2_0[0] * test_t3_0[1] - test_t2_0[1] * test_t3_0[0]
-        ])
-        t1_1 = np.array([
-            t2_1[1] * t3_1[2] - t2_1[2] * t3_1[1],
-            t2_1[2] * t3_1[0] - t2_1[0] * t3_1[2],
-            t2_1[0] * t3_1[1] - t2_1[1] * t3_1[0]
-        ])
-        omega = np.arctan2(
-            (np.dot(t2_0, t1_1) - np.dot(t1_0, t2_1)) /
-            (np.dot(t1_0, t1_1) + np.dot(t2_0, t2_1))
-        )
-        omega_test = np.arctan2(
-            (np.dot(test_t2_0, t1_1) - np.dot(test_t1_0, t2_1)) /
-            (np.dot(test_t1_0, t1_1) + np.dot(test_t2_0, t2_1))
+        omega = compute_twist_angle_omega(t2_0, t3_0, t2_1, t3_1)
+        omega_test = compute_twist_angle_omega(
+            test_t2_0, test_t3_0, t2_1, t3_1
         )
         for i in range(3):
             self.dr_test[i] = r_1[i]  - test_r_0[i]
@@ -2150,17 +2235,88 @@ cdef class SSTWLC(SSWLC):
             self.dr_perp_test[i] = self.dr_test[i] - test_t3_0[i] * dr_par_test
             self.dr_perp[i] = self.dr[i] - t3_0[i] * dr_par
             self.bend_test[i] = (
-                t3_1[i] - test_t3_0[i] - self.dr_perp_test[i] * self.eta
+                t3_1[i] - test_t3_0[i] - self.dr_perp_test[i] *
+                self.eta[bond_ind]
             )
             self.bend[i] = (
-                t3_1[i] - t3_0[i] - self.dr_perp[i] * self.eta
+                t3_1[i] - t3_0[i] - self.dr_perp[i] * self.eta[bond_ind]
             )
         return (self.E_pair_with_twist(
-            self.bend_test, dr_par_test, self.dr_perp_test, omega_test
-        ) -
-            self.E_pair_with_twist(
-                self.bend, dr_par, self.dr_perp, omega
+            self.bend_test, dr_par_test, self.dr_perp_test, omega_test, bond_ind
+        ) - self.E_pair_with_twist(
+            self.bend, dr_par, self.dr_perp, omega, bond_ind
         ))
+
+    cpdef double compute_E(self):
+        """Compute the overall polymer energy at the current configuration.
+        
+        Notes
+        -----
+        This method loops over each bond in the polymer and calculates the 
+        energy change of that bond.
+
+        Returns
+        -------
+        double
+            Configurational energy of the polymer.
+        """
+        cdef double E, dr_par
+        cdef long i, j, i_m1
+        cdef double[:] dr, dr_perp, bend
+        cdef double[:] r_0, r_1, t3_0, t3_1, t2_0, t2_1
+
+        E = 0
+        for i in range(1, self.num_beads):
+            i_m1 = i - 1
+            r_0 = self.r[i_m1, :]
+            r_1 = self.r[i, :]
+            t3_0 = self.t3[i_m1, :]
+            t3_1 = self.t3[i, :]
+            t2_0 = self.t2[i_m1, :]
+            t2_1 = self.t2[i, :]
+            omega = compute_twist_angle_omega(t2_0, t3_0, t2_1, t3_1)
+            dr = vec_sub3(r_1, r_0)
+            dr_par = vec_dot3(t3_0, dr)
+            dr_perp = vec_sub3(dr, vec_scale3(t3_0, dr_par))
+            bend = t3_1.copy()
+            for j in range(3):
+                bend[j] += -t3_0[j] - self.eta[i_m1] * dr_perp[j]
+            E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i_m1)
+        return E
+
+    cpdef double compute_E_no_twist(self):
+        """Compute the overall polymer energy at the current configuration.
+        
+        Notes
+        -----
+        This method loops over each bond in the polymer and calculates the 
+        energy change of that bond.
+
+        Returns
+        -------
+        double
+            Configurational energy of the polymer.
+        """
+        cdef double E, dr_par
+        cdef long i, j, i_m1
+        cdef double[:] dr, dr_perp, bend
+        cdef double[:] r_0, r_1, t3_0, t3_1
+
+        E = 0
+        for i in range(1, self.num_beads):
+            i_m1 = i - 1
+            r_0 = self.r[i_m1, :]
+            r_1 = self.r[i, :]
+            t3_0 = self.t3[i_m1, :]
+            t3_1 = self.t3[i, :]
+            dr = vec_sub3(r_1, r_0)
+            dr_par = vec_dot3(t3_0, dr)
+            dr_perp = vec_sub3(dr, vec_scale3(t3_0, dr_par))
+            bend = t3_1.copy()
+            for j in range(3):
+                bend[j] += -t3_0[j] - self.eta[i_m1] * dr_perp[j]
+            E += self.E_pair(bend, dr_par, dr_perp, i_m1)
+        return E
 
 
 cdef class LoopedSSTWLC(SSTWLC):
@@ -2183,6 +2339,8 @@ cdef class LoopedSSTWLC(SSTWLC):
         See documentation for `SSTWLC` class for description of parameters.
 
         TODO: Change the default values of lt, lp to ones that makes more sense
+
+        TODO: Implement variable linker lengths in this class!
         """
         super(LoopedSSTWLC, self).__init__(
             name, r, bead_length=bead_length, lp=lp, lt=lt, bead_rad=bead_rad,
@@ -2241,7 +2399,6 @@ cdef class LoopedSSTWLC(SSTWLC):
                 r=self.r[i],
                 t3=self.t3[i],
                 t2=self.t2[i],
-                bead_length=self.bead_length,
                 rad=self.bead_rad,
                 states=self.states[i],
                 binder_names=self.binder_names
@@ -2275,7 +2432,8 @@ cdef class LoopedSSTWLC(SSTWLC):
             self.r_trial[ind0, :],
             self.t3[ind0_m_1, :],
             self.t3[ind0, :],
-            self.t3_trial[ind0, :]
+            self.t3_trial[ind0, :],
+            ind0_m_1
         )
         # Elastic energy change from RHS of the move
         indf_m_1 = indf - 1
@@ -2287,10 +2445,916 @@ cdef class LoopedSSTWLC(SSTWLC):
             self.r[indf, :],
             self.t3[indf_m_1, :],
             self.t3_trial[indf_m_1, :],
-            self.t3[indf, :]
+            self.t3[indf, :],
+            indf_m_1
         )
 
         return delta_energy_poly
+
+
+cdef class DetailedChromatin(SSTWLC):
+    """Class representation of a chromatin fiber with detailed nucleosomes.
+    """
+    def __init__(
+        self,
+        str name,
+        double[:, ::1] r,
+        *,
+        double bp_wrap,
+        double[:] bead_length,
+        double lp,
+        double lt,
+        double[:, ::1] t3 = empty_2d,
+        double[:, ::1] t2 = empty_2d,
+        long[:, ::1] states = mty_2d_int,
+        np.ndarray binder_names = empty_1d,
+        long[:, ::1] chemical_mods = mty_2d_int,
+        np.ndarray chemical_mod_names = empty_1d_str,
+        str log_path = "", long max_binders = -1
+    ):
+        """Construct a detailed chromatin object as a subclass of `SSTWLC`.
+
+        Notes
+        -----
+        See documentation for `SSTWLC` class for description of common
+        parameters.
+
+        Parameters
+        ----------
+        bp_wrap : double
+            Number of base pairs wrapped around each nucleosome
+        """
+        self.bp_wrap = bp_wrap
+        self.bead_rad = consts_dict["R"]
+        super(DetailedChromatin, self).__init__(
+            name, r, bead_length=bead_length, lp=lp, lt=lt,
+            bead_rad=self.bead_rad, t3=t3, t2=t2, states=states,
+            binder_names=binder_names, log_path=log_path,
+            chemical_mods=chemical_mods, chemical_mod_names=chemical_mod_names,
+            max_binders=max_binders
+        )
+        self.construct_beads()
+
+    cdef void construct_beads(self):
+        """Construct Nucleosome objects forming beads of our polymer.
+        """
+        self.beads = {
+            i: beads.DetailedNucleosome(
+                id_=i,
+                r=self.r[i],
+                t3=self.t3[i],
+                t2=self.t2[i],
+                bp_wrap=self.bp_wrap,
+                states=self.states[i],
+                binder_names=self.binder_names
+            ) for i in range(self.r.shape[0])
+        }
+
+    cdef double continuous_dE_poly(
+            self,
+            long ind0,
+            long indf,
+    ):
+        """Compute change in polymer energy for a continuous bead region.
+
+        Notes
+        -----
+        See documentation for `SSWLC.continuous_dE_poly()` class for details 
+        and parameter/return descriptions.
+        """
+        cdef long ind0_m_1, indf_m_1
+        cdef double delta_energy_poly
+
+        ind0_m_1 = ind0 - 1
+        indf_m_1 = indf - 1
+
+        delta_energy_poly = 0
+        if ind0 != 0:
+            # Compute the entry and exit positions and orientations of the
+            # linker DNA for the first nucleosome in the continuous region
+            ri_0, ro_0, t3i_0, t3o_0, t2i_0, t2o_0 =  \
+                self.beads[ind0_m_1].update_configuration(
+                    np.asarray(self.r[ind0_m_1, :]),
+                    np.asarray(self.t3[ind0_m_1, :]),
+                    np.asarray(self.t2[ind0_m_1, :])
+                )
+            ri_1_try, ro_1_try, t3i_1_try, t3o_1_try, t2i_1_try, t2o_1_try = \
+                self.beads[ind0].update_configuration(
+                    np.asarray(self.r_trial[ind0, :]),
+                    np.asarray(self.t3_trial[ind0, :]),
+                    np.asarray(self.t2_trial[ind0, :])
+                )
+            ri_1, ro_1, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                self.beads[ind0].update_configuration(
+                    np.asarray(self.r[ind0, :]),
+                    np.asarray(self.t3[ind0, :]),
+                    np.asarray(self.t2[ind0, :])
+                )
+
+            # Check progress (can be removed later)
+            # assert np.isclose(np.linalg.norm(t2i_0), 1)
+            # assert np.isclose(np.linalg.norm(t2o_0), 1)
+            # assert np.isclose(
+            #     np.linalg.norm(ri_0 - np.asarray(self.r[ind0_m_1, :])),
+            #     np.linalg.norm(ro_0 - np.asarray(self.r[ind0_m_1, :]))
+            # ), "Error in calculation of entry and exit positions"
+            # assert np.isclose(np.linalg.norm(t2i_1_try), 1)
+            # assert np.isclose(np.linalg.norm(t2o_1_try), 1)
+            # assert np.isclose(
+            #     np.linalg.norm(ri_1_try - np.asarray(self.r_trial[ind0, :])),
+            #     np.linalg.norm(ro_1_try - np.asarray(self.r_trial[ind0, :]))
+            # ), "Error in calculation of entry and exit positions"
+            # assert np.isclose(np.linalg.norm(t2i_1), 1)
+            # assert np.isclose(np.linalg.norm(t2o_1), 1)
+            # assert np.isclose(
+            #     np.linalg.norm(ri_1 - np.asarray(self.r[ind0, :])),
+            #     np.linalg.norm(ro_1 - np.asarray(self.r[ind0, :]))
+            # ), "Error in calculation of entry and exit positions"
+
+            delta_energy_poly += self.bead_pair_dE_poly_forward_with_twist(
+                ro_0, ri_1, ri_1_try, t3o_0, t3i_1, t3i_1_try, t2o_0, t2i_1,
+                t2i_1_try, bond_ind = ind0_m_1
+            )
+        if indf != self.num_beads:
+            # Compute the entry and exit positions and orientations of the
+            # linker DNA for the last nucleosome in the continuous region
+            ri_0_try, ro_0_try, t3i_0_try, t3o_0_try, t2i_0_try, t2o_0_try = \
+                self.beads[indf_m_1].update_configuration(
+                    np.asarray(self.r_trial[indf_m_1, :]),
+                    np.asarray(self.t3_trial[indf_m_1, :]),
+                    np.asarray(self.t2_trial[indf_m_1, :])
+                )
+            ri_0, ro_0, t3i_0, t3o_0, t2i_0, t2o_0 = \
+                self.beads[indf_m_1].update_configuration(
+                    np.asarray(self.r[indf_m_1, :]),
+                    np.asarray(self.t3[indf_m_1, :]),
+                    np.asarray(self.t2[indf_m_1, :])
+                )
+            ri_1, ro_1, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                self.beads[indf].update_configuration(
+                    np.asarray(self.r[indf, :]),
+                    np.asarray(self.t3[indf, :]),
+                    np.asarray(self.t2[indf, :])
+                )
+
+            # Check progress (can be removed later)
+            # assert np.isclose(np.linalg.norm(t2i_0_try), 1)
+            # assert np.isclose(np.linalg.norm(t2o_0_try), 1)
+            # assert np.isclose(
+            #     np.linalg.norm(ri_0_try - np.asarray(self.r_trial[indf_m_1,:])),
+            #     np.linalg.norm(ro_0_try - np.asarray(self.r_trial[indf_m_1,:]))
+            # ), "Error in calculation of entry and exit positions"
+            # assert np.isclose(np.linalg.norm(t2i_0), 1)
+            # assert np.isclose(np.linalg.norm(t2o_0), 1)
+            # assert np.isclose(
+            #     np.linalg.norm(ri_0 - np.asarray(self.r[indf_m_1, :])),
+            #     np.linalg.norm(ro_0 - np.asarray(self.r[indf_m_1, :]))
+            # ), "Error in calculation of entry and exit positions"
+            # assert np.isclose(np.linalg.norm(t2i_1), 1)
+            # assert np.isclose(np.linalg.norm(t2o_1), 1)
+            # assert np.isclose(
+            #     np.linalg.norm(ri_1 - np.asarray(self.r[indf, :])),
+            #     np.linalg.norm(ro_1 - np.asarray(self.r[indf, :]))
+            # ), "Error in calculation of entry and exit positions"
+
+            delta_energy_poly += self.bead_pair_dE_poly_reverse_with_twist(
+                ro_0, ro_0_try, ri_1, t3o_0, t3o_0_try, t3i_1, t2o_0, t2o_0_try,
+                t2i_1, bond_ind=indf_m_1
+            )
+        return delta_energy_poly
+
+
+cdef class DetailedChromatin2(DetailedChromatin):
+    """Chromatin fiber with detailed nucleosomes without nucleosome diameter.
+
+    Notes
+    -----
+    This class is identical to `DetailedChromatin` except that the nucleosome
+    diameter is not included in the energy calculations. This is useful for
+    comparison with theoretical end-to-end distances of a kinked wormlike chain.
+
+    Parameters
+    ----------
+    See documentation for `DetailedChromatin` class for details and parameter
+    descriptions.
+    """
+    def __init__(
+        self,
+        str name,
+        double[:, ::1] r,
+        *,
+        double bp_wrap,
+        double[:] bead_length,
+        double lp,
+        double lt,
+        double[:, ::1] t3 = empty_2d,
+        double[:, ::1] t2 = empty_2d,
+        long[:, ::1] states = mty_2d_int,
+        np.ndarray binder_names = empty_1d,
+        long[:, ::1] chemical_mods = mty_2d_int,
+        np.ndarray chemical_mod_names = empty_1d_str,
+        str log_path = "", long max_binders = -1
+    ):
+        """Initialize a detailed chromatin fiber.
+
+        Parameters
+        ----------
+        see `DetailedChromatin.__init__()` for details
+        """
+        super().__init__(
+            name, r, bp_wrap=bp_wrap, bead_length=bead_length,
+            lp=lp, lt=lt, t3=t3, t2=t2, states=states,
+            binder_names=binder_names, chemical_mods=chemical_mods,
+            chemical_mod_names=chemical_mod_names, log_path=log_path,
+            max_binders=max_binders
+        )
+
+    cdef double continuous_dE_poly(
+            self,
+            long ind0,
+            long indf,
+    ):
+        """Compute change in polymer energy for a continuous bead region.
+
+        Notes
+        -----
+        See documentation for `SSWLC.continuous_dE_poly()` class for details 
+        and parameter/return descriptions.
+        """
+        cdef long ind0_m_1, indf_m_1
+        cdef double delta_energy_poly
+
+        ind0_m_1 = ind0 - 1
+        indf_m_1 = indf - 1
+
+        delta_energy_poly = 0
+        if ind0 != 0:
+            # Compute the entry and exit positions and orientations of the
+            # linker DNA for the first nucleosome in the continuous region
+            _, _, t3i_0, t3o_0, t2i_0, t2o_0 = \
+                self.beads[ind0_m_1].update_configuration(
+                    self.r[ind0_m_1, :], self.t3[ind0_m_1, :],
+                    self.t2[ind0_m_1, :]
+                )
+            _, _, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                self.beads[ind0].update_configuration(
+                    self.r[ind0, :], self.t3[ind0, :], self.t2[ind0, :]
+                )
+            _, _, t3i_1_try, t3o_1_try, t2i_1_try, t2o_1_try = \
+                self.beads[ind0].update_configuration(
+                    self.r_trial[ind0, :], self.t3_trial[ind0, :],
+                    self.t2_trial[ind0, :]
+                )
+            delta_energy_poly += self.bead_pair_dE_poly_forward_with_twist(
+                self.r[ind0_m_1, :], self.r[ind0, :],  self.r_trial[ind0, :],
+                t3o_0, t3i_1, t3i_1_try, t2o_0, t2i_1, t2i_1_try,
+                bond_ind = ind0_m_1
+            )
+        if indf != self.num_beads:
+            # Compute the entry and exit positions and orientations of the
+            # linker DNA for the last nucleosome in the continuous region
+            _, _, t3i_0, t3o_0, t2i_0, t2o_0 = \
+                self.beads[indf_m_1].update_configuration(
+                    self.r[indf_m_1, :], self.t3[indf_m_1, :],
+                    self.t2[indf_m_1, :]
+                )
+            _, _, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                self.beads[indf].update_configuration(
+                    self.r[indf, :], self.t3[indf, :], self.t2[indf, :]
+                )
+            _, _, t3i_0_try, t3o_0_try, t2i_0_try, t2o_0_try = \
+                self.beads[indf_m_1].update_configuration(
+                    self.r_trial[indf_m_1, :], self.t3_trial[indf_m_1, :],
+                    self.t2_trial[indf_m_1, :]
+                )
+            delta_energy_poly += self.bead_pair_dE_poly_reverse_with_twist(
+                self.r[indf_m_1, :], self.r_trial[indf_m_1, :], self.r[indf, :],
+                t3o_0, t3o_0_try, t3i_1, t2o_0, t2o_0_try, t2i_1,
+                bond_ind = indf_m_1
+            )
+        return delta_energy_poly
+
+
+cdef class DetailedChromatinWithSterics(DetailedChromatin):
+    """Chromatin fiber with detailed nucleosomes and steric interactions.
+
+    Notes
+    -----
+    Because we are computing pairwise distances explicitly, we can evaluate
+    binder protein interactions specifically. For this reason, we do not need
+    to use a field. The field is never active. We can specify a null field as
+    a place-holder. Beware that the field will not contribute to the energy
+    associated with an instance of this class.
+    """
+    def __init__(
+        self,
+        str name,
+        double[:, ::1] r,
+        *,
+        double bp_wrap,
+        double[:] bead_length,
+        double lp,
+        double lt,
+        binders = None,
+        double[:, ::1] t3 = empty_2d,
+        double[:, ::1] t2 = empty_2d,
+        long[:, ::1] states = mty_2d_int,
+        np.ndarray binder_names = empty_1d,
+        long[:, ::1] chemical_mods = mty_2d_int,
+        np.ndarray chemical_mod_names = empty_1d_str,
+        str log_path = "", long max_binders = -1
+    ):
+        """Initialize a detailed chromatin fiber with steric interactions.
+
+        Parameters
+        ----------
+        see `DetailedChromatin.__init__()` for details
+
+        binders : sequence of Binder objects, optional
+            Representation of the interacting binders on the chromatin fiber.
+            If None, no binders are present. Default is None.
+        """
+        super(DetailedChromatinWithSterics, self).__init__(
+            name, r, bp_wrap=bp_wrap, bead_length=bead_length,
+            lp=lp, lt=lt, t3=t3, t2=t2, states=states,
+            binder_names=binder_names, chemical_mods=chemical_mods,
+            chemical_mod_names=chemical_mod_names, log_path=log_path,
+            max_binders=max_binders
+        )
+        self.V0 = 1.0
+        self.excluded_distance = self.beads[0].rad * 2.0
+        self.distances = np.zeros((self.num_beads, self.num_beads))
+        self.distances_trial = np.zeros((self.num_beads, self.num_beads))
+        self.get_distances()
+
+        # Load binders
+        self.binders = binders
+        if self.binders is not None:
+            self.num_binders = len(self.binders)
+        else:
+            self.num_binders = 0
+
+    cpdef bint is_field_active(self):
+        """The field is never active for this class.
+        
+        Notes
+        -----
+        All interactions are handled using explicit pairwise interactions.
+        """
+        return 0
+
+    cpdef void get_distances(self):
+        """Get the distances between all pairs of nucleosomes.
+        """
+        cdef long i, j
+        for i in range(self.num_beads - 1):
+            self.distances[i, i] = 0.0
+            self.distances_trial[i, i] = 0.0
+            for j in range(i + 1, self.num_beads):
+                self.distances[i, j] = np.sqrt(
+                    (self.r[i, 0] - self.r[j, 0]) ** 2 + \
+                    (self.r[i, 1] - self.r[j, 1]) ** 2 + \
+                    (self.r[i, 2] - self.r[j, 2]) ** 2
+                )
+                self.distances_trial[i, j] = np.sqrt(
+                    (self.r_trial[i, 0] - self.r_trial[j, 0]) ** 2 + \
+                    (self.r_trial[i, 1] - self.r_trial[j, 1]) ** 2 + \
+                    (self.r_trial[i, 2] - self.r_trial[j, 2]) ** 2
+                )
+                self.distances[j, i] = self.distances[i, j]
+                self.distances_trial[j, i] = self.distances_trial[i, j]
+
+    cpdef void get_delta_distances(self, long ind0, long indf):
+        """Get changes in distances, rather than every distance
+        
+        Notes
+        -----
+        This function operates a lot like `get_distances`, but only computes
+        the pairwise distances only between beads affected by a move and all
+        other beads in the system. This is useful for computing the change in
+        energy associated with a proposed move in a more efficient manner.
+        
+        This method only updates the `distances_trial` attribute of the class.
+        
+        Parameters
+        ----------
+        ind0, indf : long
+            Indices of the first and one-past-the-last beads affected by the
+            move
+        """
+        cdef long i, j
+        for i in range(ind0, indf):
+            self.distances_trial[i, i] = 0.0
+            for j in range(self.num_beads):
+
+                # Let's avoid unnecessary computation
+                if i == j:
+                    continue
+
+                self.distances_trial[i, j] = np.sqrt(
+                    (self.r_trial[i, 0] - self.r_trial[j, 0]) ** 2 + \
+                    (self.r_trial[i, 1] - self.r_trial[j, 1]) ** 2 + \
+                    (self.r_trial[i, 2] - self.r_trial[j, 2]) ** 2
+                )
+                self.distances_trial[j, i] = self.distances_trial[i, j]
+
+    cpdef double eval_delta_steric_clashes(self, long ind0, long indf):
+        """Get the change in steric clashes associated with a move.
+        
+        Notes
+        -----
+        This method computes the steric clashes, but does so only by checking
+        the beads that were affected by an MC move. There is not need to
+        re-check for steric clashes between unmoved beads.
+        
+        Returns
+        -------
+        double
+            Change in the number of steric clashes associated with the move.
+        """
+        cdef long i, j, num_beads
+        cdef double overlap_frac, E_clash
+        E_clash = 0
+        num_beads = self.num_beads
+        for i in range(ind0, indf):
+            for j in range(num_beads):
+
+                # Don't double count!
+                if j >= i and (ind0 <= j < indf):
+                    continue
+
+                if self.distances_trial[i, j] < self.excluded_distance:
+                    overlap_frac = (
+                        self.excluded_distance / self.distances_trial[i, j]
+                    )
+                    E_clash += self.V0 * (overlap_frac**12 -
+                        2 * overlap_frac**6 + 1)
+                if self.distances[i, j] < self.excluded_distance:
+                    overlap_frac = (
+                        self.excluded_distance / self.distances[i, j]
+                    )
+                    E_clash -= self.V0 * (overlap_frac**12 -
+                        2 * overlap_frac**6 + 1)
+        return E_clash
+
+    cpdef double eval_E_steric_clashes(self):
+        """Compute the Energy associated with steric clashes.
+        
+        Returns
+        -------
+        double
+            Energy associated with steric clashes in the current configuration.
+        """
+        cdef long i, j, num_beads
+        cdef double overlap_frac
+        E_clash = 0
+        num_beads = len(self.distances)
+        for i in range(0, num_beads - 1):
+            for j in range(i + 1, num_beads):
+                if self.distances[i, j] < self.excluded_distance:
+                    overlap_frac = (
+                        self.excluded_distance / self.distances[i, j]
+                    )
+                    E_clash += self.V0 * (overlap_frac ** 12 -
+                                          2 * overlap_frac ** 6 + 1)
+        return E_clash
+
+    cpdef long check_steric_clashes(self, double[:, ::1] distances):
+        """Check for steric clashes between nucleosomes.
+
+        Returns
+        -------
+        long
+            Number of Steric clashes.
+        """
+        cdef long i, j, n_clashes, num_beads
+        n_clashes = 0
+        num_beads = len(distances)
+        for i in range(num_beads - 1):
+            for j in range(i + 1, num_beads):
+                if distances[i, j] < self.excluded_distance:
+                    n_clashes += 1
+        return n_clashes
+
+    cpdef double compute_dE(
+        self,
+        str move_name,
+        long[:] inds,
+        long n_inds
+    ):
+        """Compute change in energy for proposed transformation.
+        
+        Notes
+        -----
+        This method accounts for the elastic energy of the polymer, the steric
+        interactions between nucleosomes, and the interactions between binders.
+        
+        Parameters
+        ----------
+        move_name : str
+            Name of the MC move for which the energy change is being calculated
+        inds : array_like (N,)
+            Indices of N beads affected by the MC move
+        n_inds : long
+            Number of beads affected by the MC move
+
+        Returns
+        -------
+        delta_energy_poly : double
+            Change in polymer elastic energy associated with the trial move
+        """
+        cdef double delta_energy_poly, dE_clashes
+        cdef long ind0, indf, ind, i
+
+        delta_energy_poly = 0
+
+        # Check Sterics: Compute pairwise distances between nucleosomes
+        # New steric clashes only occur for moves involving translations
+        if (
+            move_name == "slide" or move_name == "end_pivot" or
+            move_name == "crank_shaft"
+        ):
+            ind0 = inds[0]
+            indf = inds[n_inds-1] + 1
+            self.get_delta_distances(ind0, indf)
+            dE_clashes = self.eval_delta_steric_clashes(ind0, indf)
+            delta_energy_poly += dE_clashes
+
+        if move_name == "change_binding_state":
+            if self.num_binders > 0:
+                ind0 = inds[0]
+                indf = inds[n_inds-1] + 1
+                delta_energy_poly += self.binding_dE(ind0, indf, n_inds)
+                # Compute change in reader protein interactions
+                delta_energy_poly += self.evaluate_binder_interactions()
+        elif (
+            move_name == "slide" or move_name == "end_pivot" or
+            move_name == "crank_shaft"
+        ):
+            ind0 = inds[0]
+            indf = inds[n_inds-1] + 1
+            delta_energy_poly += self.continuous_dE_poly(ind0, indf)
+        elif move_name == "tangent_rotation":
+            for i in range(n_inds):
+                ind = inds[i]
+                ind0 = ind
+                indf = ind + 1
+                delta_energy_poly += self.continuous_dE_poly(ind0, indf)
+
+        return delta_energy_poly
+
+    cpdef double evaluate_binder_interactions(self):
+        """Evaluate change in energy associated with binding states.
+
+        Notes
+        -----
+        Pairwise distances should be updated before running this method.
+        To avoid double counting cross-interactions, the cross-interaction
+        energy associated with two binders should only be listed in the
+        properties of one of the binders. The cross-interaction energy should
+        be listed as 0 for the pair in the properties of the other binder.
+
+        Returns
+        -------
+        double
+            Change in energy associated with binding states and reader protein
+            interactions.
+        """
+        cdef long i, j, k, l
+        cdef double delta_energy_binding = 0.0
+        cdef double n_pairs, n_pairs_trial, cutoff_distance
+
+        # Self interactions, same nucleosome
+        for i in range(self.num_binders):
+            for j in range(self.num_beads):
+                n_pairs = self.states[j, i] * (self.states[j, i] - 1) / 2
+                n_pairs_trial = \
+                    self.states_trial[j, i] * (self.states_trial[j, i] - 1) / 2
+                delta_energy_binding += self.binders[i].interaction_energy * (
+                    n_pairs_trial - n_pairs
+                )
+        # Self interaction, different nucleosomes
+        for i in range(self.num_binders):
+            for j in range(self.num_beads - 1):
+                for k in range(j + 1, self.num_beads):
+                    cutoff_distance = self.binders[i].interaction_radius
+                    if self.distances_trial[j, k] <= cutoff_distance:
+                        n_pairs_trial = \
+                            self.states_trial[j, i] * self.states_trial[k, i]
+                        delta_energy_binding += \
+                            self.binders[i].interaction_energy * n_pairs_trial
+                    if self.distances[j, k] <= cutoff_distance:
+                        n_pairs = self.states[j, i] * self.states[k, i]
+                        delta_energy_binding -= \
+                            self.binders[i].interaction_energy * n_pairs
+        # Cross-interaction, same nucleosome
+        for i in range(self.num_binders):
+            for j in range(self.num_binders):
+                if j == i:
+                    continue
+                for k in range(self.num_beads):
+                    n_pairs = self.states[k, i] * self.states[k, j]
+                    n_pairs_trial = \
+                        self.states_trial[k, i] * self.states_trial[k, j]
+                    delta_energy_binding += \
+                        self.binders[i].cross_talk_interaction_energy[
+                            self.binders[j].name
+                        ] * (
+                            n_pairs_trial - n_pairs
+                        )
+        # Cross-interaction, different nucleosomes
+        for i in range(self.num_binders):
+            for j in range(self.num_binders):
+                if j == i:
+                    continue
+                for k in range(self.num_beads - 1):
+                    for l in range(k + 1, self.num_beads):
+                        cutoff_distance = self.binders[i].interaction_radius
+                        if self.distances_trial[k, l] <= cutoff_distance:
+                            n_pairs_trial = \
+                                self.states_trial[k, i]*self.states_trial[l, j]
+                            delta_energy_binding += \
+                                self.binders[i].cross_talk_interaction_energy[
+                                    self.binders[j].name
+                                ] * n_pairs_trial
+                        if self.distances[k, l] <= cutoff_distance:
+                            n_pairs = self.states[k, i] * self.states[l, j]
+                            delta_energy_binding -= \
+                                self.binders[i].cross_talk_interaction_energy[
+                                    self.binders[j].name
+                                ] * n_pairs
+        return delta_energy_binding
+
+    cpdef double get_E_bind(self):
+        """Evaluate energy associated with current binding states.
+
+        Notes
+        -----
+        Pairwise distances should be updated before running this method.
+        To avoid double counting cross-interactions, the cross-interaction
+        energy associated with two binders should only be listed in the
+        properties of one of the binders. The cross-interaction energy should
+        be listed as 0 for the pair in the properties of the other binder.
+
+        Returns
+        -------
+        double
+            Change in energy associated with binding states and reader protein
+            interactions.
+        """
+        cdef long i, j, k, l
+        cdef double delta_energy_binding = 0.0
+        cdef double n_pairs, n_pairs_trial, cutoff_distance
+
+        # Self interactions, same nucleosome
+        for i in range(self.num_binders):
+            for j in range(self.num_beads):
+                n_pairs = self.states[j, i] * (self.states[j, i] - 1) / 2
+                delta_energy_binding += \
+                    self.binders[i].interaction_energy * n_pairs
+        # Self interaction, different nucleosomes
+        for i in range(self.num_binders):
+            for j in range(self.num_beads - 1):
+                for k in range(j + 1, self.num_beads):
+                    cutoff_distance = self.binders[i].interaction_radius
+                    if self.distances[j, k] <= cutoff_distance:
+                        n_pairs = self.states[j, i] * self.states[k, i]
+                        delta_energy_binding += \
+                            self.binders[i].interaction_energy * n_pairs
+        # Cross-interaction, same nucleosome
+        for i in range(self.num_binders):
+            for j in range(self.num_binders):
+                if j == i:
+                    continue
+                for k in range(self.num_beads):
+                    n_pairs = self.states[k, i] * self.states[k, j]
+                    delta_energy_binding += \
+                        self.binders[i].cross_talk_interaction_energy[
+                            self.binders[j].name
+                        ] * n_pairs
+        # Cross-interaction, different nucleosomes
+        for i in range(self.num_binders):
+            for j in range(self.num_binders):
+                if j == i:
+                    continue
+                for k in range(self.num_beads - 1):
+                    for l in range(k + 1, self.num_beads):
+                        cutoff_distance = self.binders[i].interaction_radius
+                        if self.distances[k, l] <= cutoff_distance:
+                            n_pairs = self.states[k, i] * self.states[l, j]
+                            delta_energy_binding += \
+                                self.binders[i].cross_talk_interaction_energy[
+                                    self.binders[j].name
+                                ] * n_pairs
+        return delta_energy_binding
+
+    cpdef double compute_E(self):
+        """Compute the overall polymer energy at the current configuration.
+        
+        Notes
+        -----
+        This method loops over each bond in the polymer and calculates the 
+        energy change of that bond.
+
+        Returns
+        -------
+        double
+            Configurational energy of the polymer.
+        """
+        cdef double E, dr_par
+        cdef long i, j, i_m1
+        cdef double[:] dr, dr_perp, bend
+        cdef double[:] r_0, r_1, t3_0, t3_1, t2_0, t2_1
+
+        E = 0
+
+        # Compute the elastic energy
+        for i in range(1, self.num_beads):
+            i_m1 = i - 1
+
+            # Get the entry/exit positions and orientations!
+            ri_0, ro_0, t3i_0, t3o_0, t2i_0, t2o_0 = \
+                self.beads[i_m1].update_configuration(
+                    np.asarray(self.r[i_m1, :]),
+                    np.asarray(self.t3[i_m1, :]),
+                    np.asarray(self.t2[i_m1, :])
+                )
+            ri_1, ro_1, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                self.beads[i].update_configuration(
+                    np.asarray(self.r[i, :]),
+                    np.asarray(self.t3[i, :]),
+                    np.asarray(self.t2[i, :])
+                )
+            omega = compute_twist_angle_omega(t2o_0, t3o_0, t2i_1, t3i_1)
+            dr = vec_sub3(ri_1, ro_0)
+            dr_par = vec_dot3(t3o_0, dr)
+            dr_perp = vec_sub3(dr, vec_scale3(t3o_0, dr_par))
+            bend = t3i_1.copy()
+            for j in range(3):
+                bend[j] += -t3o_0[j] - self.eta[i_m1] * dr_perp[j]
+            E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i_m1)
+        E_elastic = E
+
+        # Compute the energy change associated with sterics
+        E = 0
+        # Compute pairwise distances between nucleosomes
+        self.get_distances()
+        # Evaluate the energy of steric clashes
+        E = self.eval_E_steric_clashes()
+        E_sterics = E
+
+        # Compute change in reader protein interactions
+        E = 0
+        if self.num_binders > 0:
+            E = self.get_E_bind()
+        E_interactions = E
+
+        # compute the total energy
+        E = E_elastic + E_sterics + E_interactions
+
+        return E
+
+    cpdef dict compute_E_detailed(self):
+        """Compute the overall polymer energy at the current configuration.
+        
+        Notes
+        -----
+        This method loops over each bond in the polymer and calculates the 
+        energy change of that bond. The method returns the energy as a
+        dictionary with the elastic, steric, and interaction components of
+        the total energy.
+
+        Returns
+        -------
+        Dict[str, float]
+            Dictionary of the elastic, steric, interaction, and total energy
+            of a configuration.
+        """
+        cdef double E, dr_par
+        cdef long i, j, i_m1
+        cdef double[:] dr, dr_perp, bend
+        cdef double[:] r_0, r_1, t3_0, t3_1, t2_0, t2_1
+
+        E = 0
+
+        # Compute elastic energy
+        for i in range(1, self.num_beads):
+            i_m1 = i - 1
+            ri_0, ro_0, t3i_0, t3o_0, t2i_0, t2o_0 = \
+                self.beads[i_m1].update_configuration(
+                    np.asarray(self.r[i_m1, :]),
+                    np.asarray(self.t3[i_m1, :]),
+                    np.asarray(self.t2[i_m1, :])
+                )
+            ri_1, ro_1, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                self.beads[i].update_configuration(
+                    np.asarray(self.r[i, :]),
+                    np.asarray(self.t3[i, :]),
+                    np.asarray(self.t2[i, :])
+                )
+            omega = compute_twist_angle_omega(t2o_0, t3o_0, t2i_1, t3i_1)
+            dr = vec_sub3(ri_1, ro_0)
+            dr_par = vec_dot3(t3o_0, dr)
+            dr_perp = vec_sub3(dr, vec_scale3(t3o_0, dr_par))
+            bend = t3i_1.copy()
+            for j in range(3):
+                bend[j] += -t3o_0[j] - self.eta[i_m1] * dr_perp[j]
+            E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i_m1)
+        E_elastic = E
+
+        # Compute the energy change associated with sterics
+        E = 0
+        # Compute pairwise distances between nucleosomes
+        self.get_distances()
+        # Evaluate the energy of steric clashes
+        E = self.eval_E_steric_clashes()
+        E_sterics = E
+
+        # Compute change in reader protein interactions
+        E = 0
+        if self.num_binders > 0:
+            E = self.get_E_bind()
+        E_interactions = E
+
+        # compute the total energy
+        E = E_elastic + E_sterics + E_interactions
+
+        return {
+            "elastic": E_elastic, "steric": E_sterics,
+            "interaction": E_interactions, "total": E
+        }
+
+    cpdef dict compute_E_detailed_reverse(self):
+            """Compute the overall polymer energy at the current configuration.
+
+            Notes
+            -----
+            This method computes the total energy of a configuration in the
+            opposite direction of `compute_E_detailed`. It is intended just
+            to show that the CHANGE in energy is dependent on the way that
+            energy is calculated. We need to calculate total energy with the
+            same indexing scheme that we use to calculate the change in energy
+            with each MC step.
+
+            Returns
+            -------
+            Dict[str, float]
+                Dictionary of the elastic, steric, interaction, and total energy
+                of a configuration.
+            """
+            cdef double E, dr_par
+            cdef long i, j, i_p1
+            cdef double[:] dr, dr_perp, bend
+            cdef double[:] r_0, r_1, t3_0, t3_1, t2_0, t2_1
+
+            E = 0
+
+            # Compute elastic energy
+            for i in range(self.num_beads - 1):
+                i_p1 = i + 1
+                ri_0, ro_0, t3i_0, t3o_0, t2i_0, t2o_0 = \
+                    self.beads[i_p1].update_configuration(
+                        np.asarray(self.r[i_p1, :]),
+                        np.asarray(self.t3[i_p1, :]),
+                        np.asarray(self.t2[i_p1, :])
+                    )
+                ri_1, ro_1, t3i_1, t3o_1, t2i_1, t2o_1 = \
+                    self.beads[i].update_configuration(
+                        np.asarray(self.r[i, :]),
+                        np.asarray(self.t3[i, :]),
+                        np.asarray(self.t2[i, :])
+                    )
+                omega = compute_twist_angle_omega(t2i_0, t3i_0, t2o_1, t3o_1)
+                dr = vec_sub3(ro_1, ri_0)
+                dr_par = vec_dot3(t3i_0, dr)
+                dr_perp = vec_sub3(dr, vec_scale3(t3i_0, dr_par))
+                bend = t3o_1.copy()
+                for j in range(3):
+                    bend[j] += -t3i_0[j] - self.eta[i] * dr_perp[j]
+                E += self.E_pair_with_twist(bend, dr_par, dr_perp, omega, i)
+            E_elastic = E
+
+            # Compute the energy change associated with sterics
+            E = 0
+            # Compute pairwise distances between nucleosomes
+            self.get_distances()
+            # Evaluate the energy of steric clashes
+            E = self.eval_E_steric_clashes()
+            E_sterics = E
+
+            # Compute change in reader protein interactions
+            E = 0
+            if self.num_binders > 0:
+                E = self.get_E_bind()
+            E_interactions = E
+
+            # compute the total energy
+            E = E_elastic + E_sterics + E_interactions
+
+            return {
+                "elastic": E_elastic, "steric": E_sterics,
+                "interaction": E_interactions, "total": E
+            }
 
 
 cpdef double sin_func(double x):
@@ -2358,3 +3422,40 @@ cpdef double helix_parametric_z(double t):
     """
     cdef double z = 20 * t
     return z
+
+
+cpdef double compute_twist_angle_omega(
+    double[:] t2_0, double[:] t3_0, double[:] t2_1, double[:] t3_1
+):
+    """Compute twist angle between two sets of orientation vectors.
+    
+    Parameters
+    ----------
+    t2_0, t3_0 : double[:] of shape (3,)
+        T2 and T3 orientation vectors of the first bead
+    t2_1, t3_1 : double[:] of shape (3,)
+        T2 and T3 orientation vectors of the second bead
+    
+    Returns
+    -------
+    double
+        Twist angle (in radians)
+    """
+    cdef double[:] t1_0, t1_1
+    cdef double omega
+
+    t1_0 = np.array([
+        t2_0[1] * t3_0[2] - t2_0[2] * t3_0[1],
+        t2_0[2] * t3_0[0] - t2_0[0] * t3_0[2],
+        t2_0[0] * t3_0[1] - t2_0[1] * t3_0[0]
+    ])
+    t1_1 = np.array([
+        t2_1[1] * t3_1[2] - t2_1[2] * t3_1[1],
+        t2_1[2] * t3_1[0] - t2_1[0] * t3_1[2],
+        t2_1[0] * t3_1[1] - t2_1[1] * t3_1[0]
+    ])
+    omega = np.arctan2(
+        (np.dot(t2_0, t1_1) - np.dot(t1_0, t2_1)),
+        (np.dot(t1_0, t1_1) + np.dot(t2_0, t2_1))
+    )
+    return omega

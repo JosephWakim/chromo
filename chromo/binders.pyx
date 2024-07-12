@@ -168,7 +168,8 @@ a cross-talk interaction energy for PRC1.
 
 prc1 = ReaderProtein(
     'PRC1', sites_per_bead=2, bind_energy_mod=-0.01, bind_energy_no_mod=1.52,
-    interaction_energy=-4, chemical_potential=-1, interaction_radius=3
+    interaction_energy=-4, chemical_potential=-1, interaction_radius=3,
+    cross_talk_interaction_energy={'HP1': 0}
 )
 """Protein Regulator of Cytokinesis 1, binds H3K27me marks.
 
