@@ -54,7 +54,7 @@ if __name__ == "__main__":
         install_requires=[
             # "bioframe~=0.3.3",
             "Cython~=0.29.32",
-            "IPython~=8.4.0",
+            "IPython>=8.10",
             "matplotlib~=3.5.2",
             "numba~=0.57.1",
             "numpy~=1.21.6",
