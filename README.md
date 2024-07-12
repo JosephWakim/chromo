@@ -6,7 +6,7 @@ Joseph Wakim, Bruno Beltran, Andrew Spakowitz
 ## Quickstart
 
 Chromo is publicly available on the Spakowitz Lab GitHub account in the
-`“Chromo” repository <https://github.com/SpakowitzLab/chromo>`_.
+[“Chromo” repository](https://github.com/SpakowitzLab/chromo>).
 The software is primarily designed for Unix-like environments (Mac and Linux)
 using the Anaconda package manager.
 Follow the steps below to set up Chromo locally:
@@ -15,8 +15,8 @@ Follow the steps below to set up Chromo locally:
 
    `$ git clone https://github.com/SpakowitzLab/chromo.git`
 
-2. Run :code:`make_all.sh` in the main directory of the repository to automatically
-   set up a new conda environment named :code:`chromo`, install the required
+2. Run `make_all.sh` in the main directory of the repository to automatically
+   set up a new conda environment named `chromo`, install the required
    dependencies, and compile the Cython code.
 
    `$ cd chromo`
@@ -37,12 +37,8 @@ The software is **lightweight**, with coarse-grained chromosome simulations
 running on a single CPU core in under two days.
 Chromo is implemented in an **object oriented manner** to promote future
 adaption of the software.
-This documentation provides descriptions of the **codebase** and
-**associated theory**.
-The documentation also includes **tutorials** to guide users through example
-simulations.
-We encourage use and modification of the simulator for research purposes to
-model chromatin or other polymer systems.
+See our documentation site for this codebase at
+[this link](https://josephwakim.github.io/chromo/).
 
 Chromatin Simulation
 --------------------
