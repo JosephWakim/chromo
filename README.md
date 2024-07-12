@@ -70,7 +70,7 @@ interactions affect chromatin compartmentalization.
     <img src="docs/source/figures/implicit_crosstalk_for_chromo_documentation.png" width="400">
 </p>
 
-We also use the codebase in `Wakim and Spakowitz, PNAS, 2024 <https://www.pnas.org/doi/abs/10.1073/pnas.2317911121?af=R>`_
+We also use the codebase in [Wakim and Spakowitz, PNAS, 2024](https://www.pnas.org/doi/abs/10.1073/pnas.2317911121?af=R)
 to resolve steric clashes between nucleosomes in chromatin fibers
 modeled with the kinked wormlike chain.
 
