@@ -54,7 +54,7 @@ if __name__ == "__main__":
         install_requires=[
             # "bioframe~=0.3.3",
             "Cython~=0.29.32",
-            "IPython~=8.4.0",
+            "IPython>=8.10",
             "matplotlib~=3.5.2",
             "numba~=0.57.1",
             "numpy~=1.21.6",
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             "scikit_learn~=1.1.2",
             "scipy~=1.11.4",
             "setuptools~=68.0.0",
-            "notebook~=6.0.0",
+            "notebook~=7.2.1",
             "jupyter~=1.0.0",
             "pytest~=7.4.3",
             'wlcstat @ git+https://github.com/JosephWakim/wlcstat.git'
@@ -72,7 +72,7 @@ if __name__ == "__main__":
             "dev": [
                 "check-manifest~=0.48",
                 "karma_sphinx_theme~=0.0.8",
-                "sphinx~=4.4.0",
+                "sphinx~=5.3.0",
                 "nbsphinx~=0.8.8",
                 "sphinx_theme~=1.0",
                 "sphinx_rtd_theme~=1.0.0"
