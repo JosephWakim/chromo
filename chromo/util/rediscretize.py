@@ -702,6 +702,7 @@ def gaussian_walk_from_point(start, N, step_size):
     np.ndarray (3, N) of float
         Gaussian random walk from specified starting point
     """
+    step_size = np.ones(N) * step_size
     return gaussian_walk(N, step_size) + start
 
 
